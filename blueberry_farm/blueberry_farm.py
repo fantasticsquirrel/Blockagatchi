@@ -22,13 +22,12 @@ def seed(name: str, royalties: int):
     metadata['royalties'] = royalties/100
 
     metadata['growing_season_length'] = 30
+    metadata['plant price'] = 100
 
     plants['growing_season'] = False
     plants['growing_season_start_time'] = now
     plants['count'] = 0
     plants['active_generation'] = -1
-    plants['total_berries'] = 0
-
 
 
 @export
@@ -112,8 +111,12 @@ def start_growing_season():
     plants['growing_season_start_time'] = now
     plants['growing_season_end_time'] =  now + datetime.timedelta(days = metadata['growing_season_length'])
     plants['finalize_time'] = now + datetime.timedelta(days = metadata['growing_season_length'] + 1)
-    plants['active_generation'] += 1
-    plants['total_berries' , plants['active_generation']] = 0
+    active_gen = plants['active_generation']
+    active_gen += 1
+    plants[active_gen, 'total_berries'] = 0
+    plants[active_gen, 'total_tau'] = 0
+
+
 
 @export
 def buy_plant():
@@ -158,7 +161,7 @@ def buy_plant():
 
     p_count = plants['count'] + 1
     name = f"Gen_{gen}_{p_count}"
-    payment(100)
+    payment(gen, metadata['plant price'])
     mint_nft(name,'placeholder description','placeholder image URL',plant_data,1)
     collection_nfts[name,'plant_calc_data'] = plant_calc_data
     plants['count'] = p_count
@@ -296,7 +299,7 @@ def spray_bugs(plant_generation : int, plant_number : int):
     if plant_data['current_bugs'] < 0 :
         plant_data['current_bugs'] = 0
 
-    payment(5)
+    payment(plant_generation, 5)
     plant_name['nft_metadata'] = plant_data
     collection_nfts[name] = plant_name
 
@@ -310,7 +313,7 @@ def grow_lights(plant_generation : int, plant_number : int):
     t_delta = plant_data["last_grow_light"] + datetime.timedelta(days = 1)
     assert now > t_delta, f"You have used a grow light too recently. Try again at {t_delta}."
 
-    payment(5)
+    payment(plant_generation, 5)
     plant_data['current_photosynthesis'] += (random.randint(3, 5))/100
     plant_data["last_grow_light"] = now
 
@@ -324,7 +327,7 @@ def fertilize(plant_generation : int, plant_number : int, num_times : int):
     plant_name = plant_all['plant_name']
     name = plant_all['name']
 
-    payment(2*num_times)
+    payment(plant_generation, 2*num_times)
     for x in range(0, num_times):
         plant_data['current_nutrients'] += (random.randint(3, 5))/100
 
@@ -349,7 +352,7 @@ def pull_weeds(plant_generation : int, plant_number : int):
     if plant_data['current_weeds'] < 0 :
         plant_data['current_weeds'] = 0
 
-    plant_data["last_squash_weed_weed"] = now
+    plant_data["last_squash_weed"] = now
     plant_name['nft_metadata'] = plant_data
     collection_nfts[name] = plant_name
 
@@ -374,6 +377,7 @@ def finalize_plant(plant_generation : int, plant_number : int):
     assert plant_generation == active_generation, f'The plant you are trying to interact with is not part of the current generation. The current generation is {active_generation}.'
     name = f'Gen_{plant_generation}_{plant_number}'
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
+    assert collection_nfts[name,'finalized'] == False, 'This plant has already been finalized.'
     end_time = plants['growing_season_end_time']
     assert now <= plants['finalize_time'] and now >= end_time, 'It is not time to finalize your plant.'
     # if ctx.caller.startswith('con_'): return "It's over!" #maybe go back and add whitelistable contracts here?
@@ -401,19 +405,27 @@ def finalize_plant(plant_generation : int, plant_number : int):
     length = metadata['growing_season_length']
     berries = ((plant_calc_data["total_water"]*plant_calc_data["total_bugs"]*plant_calc_data["total_photosynthesis"]*plant_calc_data["total_nutrients"]*plant_calc_data["total_weeds"])/(length**5))*(plant_data['total_toxicity'])
     collection_nfts[name,'berries'] = berries
-    plants['total_berries',gen] += berries
-    #NEED TO ADD LIMIT SO THIS CAN ONLY BE RUN ONCE
+    collection_nfts[name,'final_score'] = berries
+    plants[plant_generation,'total_berries'] += berries
+    collection_nfts[name,'finalized'] == True
 
 def sell_berries(plant_generation : int, plant_number : int):
-    assert plant_generation == active_generation, f'The plant you are trying to interact with is not part of the current generation. The current generation is {active_generation}.'
     name = f'Gen_{plant_generation}_{plant_number}'
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
     berries = collection_nfts[name,'berries']
+    assert berries > 0, "You don't have any berries to sell."
+    sell_price = plants[plant_generation, 'total_tau'] / plants[plant_generation,'total_berries']
+    proceeds = sell_price * berries
+    currency.transfer(amount=proceeds, to=ctx.caller)
+    collection_nfts[name,'berries'] = 0
 
 
-def payment(amount): #used to process payments
+
+def payment(plant_generation, amount): #used to process payments
     currency.transfer_from(amount=amount*0.95, to=ctx.this, main_account=ctx.caller)
     currency.transfer_from(amount=amount*0.05, to=metadata['operator'], main_account=ctx.caller)
+    plants[plant_generation, 'total_tau'] += amount
+
 
 
 @export
