@@ -107,22 +107,23 @@ def start_growing_season():
     assert collection_owner.get() == ctx.caller, "Only the owner can start a growing season."
     grow_season = plants['growing_season']
     assert grow_season == False, "It is already growing season."
-    plants['growing_season'] = True
-    plants['growing_season_start_time'] = now
-    plants['growing_season_end_time'] =  now + datetime.timedelta(days = metadata['growing_season_length'])
-    plants['finalize_time'] = now + datetime.timedelta(days = metadata['growing_season_length'] + 1)
+    growing_season_length = metadata['growing_season_length']
     active_gen = plants['active_generation']
     active_gen += 1
+    plants['growing_season'] = True
+    plants['growing_season_start_time'] = now
+    plants['growing_season_end_time'] =  now + datetime.timedelta(days = growing_season_length)
+    plants['finalize_time'] = now + datetime.timedelta(days = growing_season_length + 3)
     plants[active_gen, 'total_berries'] = 0
     plants[active_gen, 'total_tau'] = 0
-
+    plants[active_gen,'stale_claim_time'] = now + datetime.timedelta(days = growing_season_length + 30)
 
 
 @export
 def buy_plant():
     assert plants['growing_season'] == True, 'The growing season has not started, so you cannot buy a plant.'
     assert plants['growing_season_end_time'] >= now + datetime.timedelta(days = 25), "It's too far into the growing season and you cannot buy a plant now."
-    gen = plants['active_generation']
+    plant_generation = plants['active_generation']
 
     plant_data = {
         #"drought_resist": (random.randint(0, 25))/100,
@@ -139,9 +140,8 @@ def buy_plant():
         "last_interaction" : now,
         "last_daily" : now,
         "last_calc" : now,
-        "total_toxicity" : 0,
         "alive" : True,
-        "generation" : gen,
+        "generation" : plant_generation,
         "last_squash_weed" : (now + datetime.timedelta(days = -1)),
         "last_grow_light" : (now + datetime.timedelta(days = -1))
     }
@@ -160,8 +160,8 @@ def buy_plant():
     }
 
     p_count = plants['count'] + 1
-    name = f"Gen_{gen}_{p_count}"
-    payment(gen, metadata['plant price'])
+    name = f"Gen_{plant_generation}_{p_count}"
+    payment(plant_generation, metadata['plant price'])
     mint_nft(name,'placeholder description','placeholder image URL',plant_data,1)
     collection_nfts[name,'plant_calc_data'] = plant_calc_data
     plants['count'] = p_count
@@ -215,11 +215,12 @@ def daily_conditions(plant_data):
             plant_data["current_water"] += (random.randint(5, 40))/100 #how much water is gained each rainy day
             plant_data["current_photosynthesis"] += (random.randint(1, 2))/100 #How much photosynthesis increases each rainy day
 
-        plant_data["current_bugs"] += (random.randint(0, 15))/100 #how many bugs are added each day
+        plant_data["current_bugs"] += (random.randint(3, 15))/100 #how many bugs are added each day
         plant_data["current_nutrients"] -= (random.randint(5, 10))/100 #how many nutrients are consumed each day
-        plant_data["current_weeds"] += (random.randint(0, 15))/100 #how many weeds grow each day
+        plant_data["current_weeds"] += (random.randint(3, 15))/100 #how many weeds grow each day
         plant_data["last_daily"] += datetime.timedelta(days = 1)
         plant_data["current_weather"] = current_weather
+        plant_data['current_toxicity'] -= (random.randint(0, 2))/100
 
         if plant_data['current_water'] > 1 :
             plant_data['current_water'] = 1
@@ -403,7 +404,7 @@ def finalize_plant(plant_generation : int, plant_number : int):
     collection_nfts[name] = plant_name
 
     length = metadata['growing_season_length']
-    berries = ((plant_calc_data["total_water"]*plant_calc_data["total_bugs"]*plant_calc_data["total_photosynthesis"]*plant_calc_data["total_nutrients"]*plant_calc_data["total_weeds"])/(length**5))*(plant_data['total_toxicity'])
+    berries = int(((plant_calc_data["total_water"]*plant_calc_data["total_bugs"]*plant_calc_data["total_photosynthesis"]*plant_calc_data["total_nutrients"]*plant_calc_data["total_weeds"])/(length**5))*(1-plant_data['current_toxicity']))
     collection_nfts[name,'berries'] = berries
     collection_nfts[name,'final_score'] = berries
     plants[plant_generation,'total_berries'] += berries
@@ -414,19 +415,30 @@ def sell_berries(plant_generation : int, plant_number : int):
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
     berries = collection_nfts[name,'berries']
     assert berries > 0, "You don't have any berries to sell."
+    assert now >= plants['finalize_time'], f"You can't sell yet. Try again after {plants['finalize_time']} but do not wait too long."
     sell_price = plants[plant_generation, 'total_tau'] / plants[plant_generation,'total_berries']
     proceeds = sell_price * berries
     currency.transfer(amount=proceeds, to=ctx.caller)
     collection_nfts[name,'berries'] = 0
-
-
+    plants[plant_generation, 'total_tau']  -= proceeds
 
 def payment(plant_generation, amount): #used to process payments
     currency.transfer_from(amount=amount*0.95, to=ctx.this, main_account=ctx.caller)
     currency.transfer_from(amount=amount*0.05, to=metadata['operator'], main_account=ctx.caller)
     plants[plant_generation, 'total_tau'] += amount
 
+@export
+def manual_reward_add(plant_generation : int, amount : int):
+    currency.transfer_from(amount=amount, to=ctx.this, main_account=ctx.caller)
+    plants[plant_generation, 'total_tau'] += amount
 
+@export
+def stale_claims(plant_generation : int):
+    assert metadata['operator'] == ctx.caller, "Only the operator can claim stale tau."
+    assert now >= plants[plant_generation,'stale_claim_time'], "The tau is not stale yet and cannot be claimed."
+    stale_tau = plants[plant_generation, 'total_tau']
+    assert stale_tau > 0, "There is no stale tau to claim."
+    currency.transfer(amount=stale_tau, to=ctx.caller)
 
 @export
 def emergency_withdraw():
