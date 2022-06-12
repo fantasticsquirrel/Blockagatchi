@@ -23,6 +23,7 @@ def seed(name: str, royalties: int):
 
     metadata['growing_season_length'] = 30
     metadata['plant price'] = 100
+    metadata['event_handler'] = 'con_farm_events_01'
 
     plants['growing_season'] = False
     plants['growing_season_start_time'] = now
@@ -143,18 +144,17 @@ def buy_plant():
         "alive" : True,
         "generation" : plant_generation,
         "last_squash_weed" : (now + datetime.timedelta(days = -1)),
-        "last_grow_light" : (now + datetime.timedelta(days = -1))
+        "last_grow_light" : (now + datetime.timedelta(days = -1)),
+        "burn_amount" : 0
     }
 
     plant_calc_data =  {
         "previous_water": plant_data["current_water"],
         "previous_bugs" : plant_data["current_bugs"],
-        "previous_photosynthesis" : plant_data["current_photosynthesis"],
         "previous_nutrients" : plant_data["current_nutrients"],
         "previous_weeds" : plant_data["current_weeds"],
         "total_water": 0,
         "total_bugs" : 0,
-        "total_photosynthesis" : 0,
         "total_nutrients" : 0,
         "total_weeds": 0
     }
@@ -185,13 +185,13 @@ def action_setup(plant_generation : int, plant_number : int):
         plant_data["current_weeds"] += (random.randint(1, 10))/100
 
     plant_data = daily_conditions(plant_data)
-
-    #NEED TO ADD CHECKS FOR IF WATER AND NUTRIENTS ARE TOO HIGH
-
     plant_data = totalizer_calc(plant_data,name)
 
-    plant_data = dead_check(plant_data)
+    if (random.randint(1, 10)) = 10 : #10% chance of an event happening
+        event_contract = importlib.import_module(metadata['event_handler'])
+        event_contract.event(plant_data)
 
+    plant_data = dead_check(plant_data)
     plant_data['last_interaction'] = now #resets the interaction time
 
     plant_all = {
@@ -222,8 +222,12 @@ def daily_conditions(plant_data):
         plant_data["current_weather"] = current_weather
         plant_data['current_toxicity'] -= (random.randint(0, 2))/100
 
-        if plant_data['current_water'] > 1 :
+        if plant_data['current_water'] > 1 : #water can't be above 1
             plant_data['current_water'] = 1
+
+        if plant_data["current_photosynthesis"] > 1 :
+            plant_data["burn_amount"] += (plant_data["current_photosynthesis"]-1)
+            plant_data["current_photosynthesis"] = 1
 
     return plant_data
 
@@ -231,15 +235,12 @@ def totalizer_calc(plant_data,name):
     if now > plant_data['last_calc'] + datetime.timedelta(hours = 3):
         delta = now - plant_data['last_calc']
         delta_d = (delta.seconds / 86400)
-
         plant_calc_data = collection_nfts[name,'plant_calc_data']
-
+        #This sections performs an integral on the various properties for use in determining total berries produced.
         plant_calc_data["total_water"] += (delta_d**2*((plant_data["current_water"]-plant_calc_data["previous_water"])/(delta_d))/2)+plant_calc_data["previous_water"]*delta_d
         plant_calc_data["total_bugs"] += (delta_d**2*(((1-plant_data["current_bugs"])-(1-plant_calc_data["previous_bugs"]))/(delta_d))/2)+(1-plant_calc_data["previous_bugs"])*delta_d
-        plant_calc_data["total_photosynthesis"] += (delta_d**2*((plant_data["current_photosynthesis"]-plant_calc_data["previous_photosynthesis"])/(delta_d))/2)+plant_calc_data["previous_photosynthesis"]*delta_d
         plant_calc_data["total_nutrients"] += (delta_d**2*((plant_data["current_nutrients"]-plant_calc_data["previous_nutrients"])/(delta_d))/2)+plant_calc_data["previous_nutrients"]*delta_d
         plant_calc_data["total_weeds"] += (delta_d**2*(((1-plant_data["current_weeds"])-(1-plant_calc_data["previous_weeds"]))/(delta_d))/2)+(1-plant_calc_data["previous_weeds"])*delta_d
-
         collection_nfts[name,'plant_calc_data'] = plant_calc_data
         plant_data['last_calc'] = now
 
@@ -248,22 +249,20 @@ def totalizer_calc(plant_data,name):
 def dead_check(plant_data):
     if plant_data["current_toxicity"] >= 1 or plant_data["current_bugs"] >= 1 or plant_data["current_weeds"] >= 1:
         plant_data["alive"] = False
-
     if plant_data["current_water"] <= 0 or plant_data["current_nutrients"] <= 0:
         plant_data["alive"] = False
-
     return plant_data
 
 @export
 def water(plant_generation : int, plant_number : int, num_times : int):
-    plant_all = action_setup(plant_generation,plant_number)
+    plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
     plant_name = plant_all['plant_name']
     name = plant_all['name']
 
     for x in range(0, num_times):
         plant_data['current_water'] += (random.randint(5, 15))/100
-    if plant_data['current_water'] > 1 :
+    if plant_data['current_water'] > 1 : #water can't be above 1
         plant_data['current_water'] = 1
 
     plant_name['nft_metadata'] = plant_data
@@ -271,13 +270,13 @@ def water(plant_generation : int, plant_number : int, num_times : int):
 
 @export
 def squash_bugs(plant_generation : int, plant_number : int):
-    plant_all = action_setup(plant_generation,plant_number)
+    plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
     plant_name = plant_all['plant_name']
     name = plant_all['name']
 
     t_delta = plant_data["last_squash_weed"] + datetime.timedelta(minutes = 5)
-    assert now > t_delta, f"You are still squashing bugs. Try again at {t_delta}."
+    assert now > t_delta, f"You are still squashing bugs or pulling weeds. Try again at {t_delta}."
 
     plant_data['current_bugs'] -= (random.randint(2, 5))/100
     if plant_data['current_bugs'] < 0 :
@@ -289,7 +288,7 @@ def squash_bugs(plant_generation : int, plant_number : int):
 
 @export
 def spray_bugs(plant_generation : int, plant_number : int):
-    plant_all = action_setup(plant_generation,plant_number)
+    plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
     plant_name = plant_all['plant_name']
     name = plant_all['name']
@@ -306,7 +305,7 @@ def spray_bugs(plant_generation : int, plant_number : int):
 
 @export
 def grow_lights(plant_generation : int, plant_number : int):
-    plant_all = action_setup(plant_generation,plant_number)
+    plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
     plant_name = plant_all['plant_name']
     name = plant_all['name']
@@ -318,12 +317,16 @@ def grow_lights(plant_generation : int, plant_number : int):
     plant_data['current_photosynthesis'] += (random.randint(3, 5))/100
     plant_data["last_grow_light"] = now
 
+    if plant_data["current_photosynthesis"] > 1 :
+        plant_data["burn_amount"] += (plant_data["current_photosynthesis"]-1)
+        plant_data["current_photosynthesis"] = 1
+
     plant_name['nft_metadata'] = plant_data
     collection_nfts[name] = plant_name
 
 @export
-def fertilize(plant_generation : int, plant_number : int, num_times : int):
-    plant_all = action_setup(plant_generation,plant_number)
+def fertilize(plant_generation : int, plant_number : int, num_times : int): #increases nutrients of the plant
+    plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
     plant_name = plant_all['plant_name']
     name = plant_all['name']
@@ -333,15 +336,16 @@ def fertilize(plant_generation : int, plant_number : int, num_times : int):
         plant_data['current_nutrients'] += (random.randint(3, 5))/100
 
     if plant_data['current_nutrients'] > 1 :
+        plant_data["burn_amount"] += (plant_data['current_nutrients']-1)
         plant_data['current_nutrients'] = 1
 
     plant_name['nft_metadata'] = plant_data
     collection_nfts[name] = plant_name
 
 @export
-def pull_weeds(plant_generation : int, plant_number : int):
+def pull_weeds(plant_generation : int, plant_number : int): #reduces current weeds in plant and takes 5 minutes to do. Share's a timer.
 
-    plant_all = action_setup(plant_generation,plant_number)
+    plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
     plant_name = plant_all['plant_name']
     name = plant_all['name']
@@ -359,7 +363,7 @@ def pull_weeds(plant_generation : int, plant_number : int):
 
 @export
 def spray_weeds(plant_generation : int, plant_number : int):
-    plant_all = action_setup(plant_generation,plant_number)
+    plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
     plant_name = plant_all['plant_name']
     name = plant_all['name']
@@ -374,7 +378,7 @@ def spray_weeds(plant_generation : int, plant_number : int):
     collection_nfts[name] = plant_name
 
 @export
-def finalize_plant(plant_generation : int, plant_number : int):
+def finalize_plant(plant_generation : int, plant_number : int): #Finalizes your plant at the end of growing season to deterimine your berry yield.
     assert plant_generation == active_generation, f'The plant you are trying to interact with is not part of the current generation. The current generation is {active_generation}.'
     name = f'Gen_{plant_generation}_{plant_number}'
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
@@ -390,10 +394,9 @@ def finalize_plant(plant_generation : int, plant_number : int):
     delta_d = (delta.seconds / 86400)
 
     plant_calc_data = collection_nfts[name,'plant_calc_data']
-
+    #This sections performs an integral on the various properties for use in determining total berries produced.
     plant_calc_data["total_water"] += (delta_d**2*((plant_calc_data["current_water"]-plant_calc_data["previous_water"])/(delta_d))/2)+plant_calc_data["previous_water"]*delta_d
     plant_calc_data["total_bugs"] += (delta_d**2*(((1-plant_calc_data["current_bugs"])-(1-plant_calc_data["previous_bugs"]))/(delta_d))/2)+(1-plant_calc_data["previous_bugs"])*delta_d
-    plant_calc_data["total_photosynthesis"] += (delta_d**2*((plant_calc_data["current_photosynthesis"]-plant_calc_data["previous_photosynthesis"])/(delta_d))/2)+plant_calc_data["previous_photosynthesis"]*delta_d
     plant_calc_data["total_nutrients"] += (delta_d**2*((plant_calc_data["current_nutrients"]-plant_calc_data["previous_nutrients"])/(delta_d))/2)+plant_calc_data["previous_nutrients"]*delta_d
     plant_calc_data["total_weeds"] += (delta_d**2*(((1-plant_calc_data["current_weeds"])-(1-plant_calc_data["previous_weeds"]))/(delta_d))/2)+(1-plant_calc_data["previous_weeds"])*delta_d
 
@@ -404,13 +407,13 @@ def finalize_plant(plant_generation : int, plant_number : int):
     collection_nfts[name] = plant_name
 
     length = metadata['growing_season_length']
-    berries = int(((plant_calc_data["total_water"]*plant_calc_data["total_bugs"]*plant_calc_data["total_photosynthesis"]*plant_calc_data["total_nutrients"]*plant_calc_data["total_weeds"])/(length**5))*(1-plant_data['current_toxicity']))
+    berries = int(1000 * ((plant_calc_data["total_water"]*plant_calc_data["total_bugs"]*plant_calc_data["total_nutrients"]*plant_calc_data["total_weeds"])/(length**4))*(1-plant_data['current_toxicity'])*(plant_data["current_photosynthesis"])*(1-plant_data["burn_amount"]))
     collection_nfts[name,'berries'] = berries
     collection_nfts[name,'final_score'] = berries
     plants[plant_generation,'total_berries'] += berries
     collection_nfts[name,'finalized'] == True
 
-def sell_berries(plant_generation : int, plant_number : int):
+def sell_berries(plant_generation : int, plant_number : int): #redeem berries for TAU. Must be done after plant finalize time is over.
     name = f'Gen_{plant_generation}_{plant_number}'
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
     berries = collection_nfts[name,'berries']
@@ -428,14 +431,15 @@ def payment(plant_generation, amount): #used to process payments
     plants[plant_generation, 'total_tau'] += amount
 
 @export
-def manual_reward_add(plant_generation : int, amount : int):
+def manual_reward_add(plant_generation : int, amount : int): #used to manually add more tau to the prize pool
     currency.transfer_from(amount=amount, to=ctx.this, main_account=ctx.caller)
     plants[plant_generation, 'total_tau'] += amount
 
 @export
-def stale_claims(plant_generation : int):
+def stale_claims(plant_generation : int): #used by the operator to claim tau from a plant generation that ended at least 30 days prior. This allows players aple time to sell their berries
     assert metadata['operator'] == ctx.caller, "Only the operator can claim stale tau."
-    assert now >= plants[plant_generation,'stale_claim_time'], "The tau is not stale yet and cannot be claimed."
+    stale_claim_time = plants[plant_generation,'stale_claim_time']
+    assert now >= stale_claim_time, f"The tau is not stale yet and cannot be claimed. Try again after {stale_claim_time}"
     stale_tau = plants[plant_generation, 'total_tau']
     assert stale_tau > 0, "There is no stale tau to claim."
     currency.transfer(amount=stale_tau, to=ctx.caller)
