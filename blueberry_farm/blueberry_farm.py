@@ -172,7 +172,7 @@ def action_setup(plant_generation : int, plant_number : int):
     name = f'Gen_{plant_generation}_{plant_number}'
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
     assert now <= plants['growing_season_end_time'], 'The growing season is not active, so you cannot interact with your plant.'
-    # if ctx.caller.startswith('con_'): return "It's over!" #maybe go back and add whitelistable contracts here?
+    if ctx.caller.startswith('con_'): return
     plant_name = collection_nfts[name]
     plant_data = plant_name['nft_metadata']
     assert plant_data["alive"] == True, 'Your plant is dead due to neglect and you must buy a new plant to try again. Try not to kill it too.'
@@ -311,10 +311,30 @@ def grow_lights(plant_generation : int, plant_number : int):
     name = plant_all['name']
 
     t_delta = plant_data["last_grow_light"] + datetime.timedelta(days = 1)
-    assert now > t_delta, f"You have used a grow light too recently. Try again at {t_delta}."
+    assert now > t_delta, f"You have used a grow light or shade too recently. Try again at {t_delta}."
 
     payment(plant_generation, 5)
     plant_data['current_photosynthesis'] += (random.randint(3, 5))/100
+    plant_data["last_grow_light"] = now
+
+    if plant_data["current_photosynthesis"] > 1 :
+        plant_data["burn_amount"] += (plant_data["current_photosynthesis"]-1)
+        plant_data["current_photosynthesis"] = 1
+
+    plant_name['nft_metadata'] = plant_data
+    collection_nfts[name] = plant_name
+
+@export
+def shade_plant(plant_generation : int, plant_number : int):
+    plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
+    plant_data = plant_all['plant_data']
+    plant_name = plant_all['plant_name']
+    name = plant_all['name']
+
+    t_delta = plant_data["last_grow_light"] + datetime.timedelta(days = 1)
+    assert now > t_delta, f"You have used a grow light or shade too recently. Try again at {t_delta}."
+
+    plant_data['current_photosynthesis'] -= (random.randint(3, 5))/100
     plant_data["last_grow_light"] = now
 
     if plant_data["current_photosynthesis"] > 1 :
@@ -385,7 +405,7 @@ def finalize_plant(plant_generation : int, plant_number : int): #Finalizes your 
     assert collection_nfts[name,'finalized'] == False, 'This plant has already been finalized.'
     end_time = plants['growing_season_end_time']
     assert now <= plants['finalize_time'] and now >= end_time, 'It is not time to finalize your plant.'
-    # if ctx.caller.startswith('con_'): return "It's over!" #maybe go back and add whitelistable contracts here?
+    if ctx.caller.startswith('con_'): return
     plant_name = collection_nfts[name]
     plant_data = plant_name['nft_metadata']
     assert plant_data["alive"] == True, 'Your plant is dead due to neglect and you must buy a new plant to try again. Try not to kill it too.'
