@@ -15,11 +15,11 @@ metadata = Hash()
 random.seed()
 
 @construct
-def seed(name: str, royalties: int):
+def seed(name: str):
     collection_name.set(name) # Sets the name
     collection_owner.set(ctx.caller) # Sets the owner
     metadata['operator'] = ctx.caller
-    metadata['royalties'] = royalties/100
+    metadata['royalties'] = 0.05
 
     metadata['growing_season_length'] = 30
     metadata['plant price'] = 100
@@ -127,15 +127,15 @@ def buy_plant():
     plant_generation = plants['active_generation']
 
     plant_data = {
-        #"drought_resist": (random.randint(0, 25))/100,
-        #"crop_yield": (random.randint(90, 110))/100,
-        #"bug_resist": (random.randint(0, 25))/100,
-        #"photosynthesis_rate": (random.randint(90, 110))/100,
-        "current_water": (random.randint(60, 80))/100,
-        "current_bugs" : (random.randint(5, 25))/100,
+        #"drought_resist": (random.randint(0, 25)),
+        #"crop_yield": (random.randint(90, 110)),
+        #"bug_resist": (random.randint(0, 25)),
+        #"photosynthesis_rate": (random.randint(90, 110)),
+        "current_water": (random.randint(50, 80)),
+        "current_bugs" : (random.randint(5, 25)),
         "current_photosynthesis" : 0,
-        "current_nutrients" : (random.randint(60, 80))/100,
-        "current_weeds" : (random.randint(5, 25))/100,
+        "current_nutrients" : (random.randint(50, 80)),
+        "current_weeds" : (random.randint(5, 25)),
         "current_toxicity" : 0,
         "current_weather" : 1,
         "last_interaction" : now,
@@ -179,10 +179,10 @@ def action_setup(plant_generation : int, plant_number : int):
 
     #interaction idle check. If idle too long, plant gets penalized.
     if now > plant_data['last_interaction'] + datetime.timedelta(hours = 12):
-        plant_data["current_water"] -= (random.randint(5, 15))/100
-        plant_data["current_bugs"] += (random.randint(5, 15))/100
-        plant_data["current_nutrients"] -= (random.randint(5, 15))/100
-        plant_data["current_weeds"] += (random.randint(5, 15))/100
+        plant_data["current_water"] -= (random.randint(5, 15))
+        plant_data["current_bugs"] += (random.randint(5, 15))
+        plant_data["current_nutrients"] -= (random.randint(5, 15))
+        plant_data["current_weeds"] += (random.randint(5, 15))
 
     plant_data = daily_conditions(plant_data)
     plant_data = totalizer_calc(plant_data,name)
@@ -206,28 +206,28 @@ def daily_conditions(plant_data):
     while now - plant_data["last_daily"] > datetime.timedelta(days = 1): #Loops through to calculate changes to plant if it's been more than a day since the last day's changes. Does multiple days worth too if needed
         current_weather = random.randint(1, 3) # 1=sunny 2=cloudy 3=rainy
         if current_weather == 1:
-            plant_data["current_water"] -= (random.randint(10, 20))/100 #how much water is lost each sunny day
-            plant_data["current_photosynthesis"] += (random.randint(4, 6))/100 #How much photosynthesis increases each sunny day
+            plant_data["current_water"] -= (random.randint(10, 20)) #how much water is lost each sunny day
+            plant_data["current_photosynthesis"] += (random.randint(4, 6)) #How much photosynthesis increases each sunny day
         if current_weather == 2:
-            plant_data["current_water"] -= (random.randint(5, 15))/100 #how much water is lost each cloudy day
-            plant_data["current_photosynthesis"] += (random.randint(2, 4))/100 #How much photosynthesis increases each cloudy day
+            plant_data["current_water"] -= (random.randint(5, 15)) #how much water is lost each cloudy day
+            plant_data["current_photosynthesis"] += (random.randint(2, 4)) #How much photosynthesis increases each cloudy day
         if current_weather == 3:
-            plant_data["current_water"] += (random.randint(5, 25))/100 #how much water is gained each rainy day
-            plant_data["current_photosynthesis"] += (random.randint(1, 2))/100 #How much photosynthesis increases each rainy day
+            plant_data["current_water"] += (random.randint(5, 25)) #how much water is gained each rainy day
+            plant_data["current_photosynthesis"] += (random.randint(1, 2)) #How much photosynthesis increases each rainy day
 
-        plant_data["current_bugs"] += (random.randint(3, 15))/100 #how many bugs are added each day
-        plant_data["current_nutrients"] -= (random.randint(5, 10))/100 #how many nutrients are consumed each day
-        plant_data["current_weeds"] += (random.randint(3, 15))/100 #how many weeds grow each day
+        plant_data["current_bugs"] += (random.randint(3, 15)) #how many bugs are added each day
+        plant_data["current_nutrients"] -= (random.randint(5, 10)) #how many nutrients are consumed each day
+        plant_data["current_weeds"] += (random.randint(3, 15)) #how many weeds grow each day
         plant_data["last_daily"] += datetime.timedelta(days = 1)
         plant_data["current_weather"] = current_weather
-        plant_data['current_toxicity'] -= (random.randint(0, 2))/100
+        plant_data['current_toxicity'] -= (random.randint(0, 2))
 
-        if plant_data['current_water'] > 1 : #water can't be above 1
-            plant_data['current_water'] = 1
+        if plant_data['current_water'] > 100 : #water can't be above 1
+            plant_data['current_water'] = 100
 
-        if plant_data["current_photosynthesis"] > 1 :
-            plant_data["burn_amount"] += (plant_data["current_photosynthesis"]-1)
-            plant_data["current_photosynthesis"] = 1
+        if plant_data["current_photosynthesis"] > 100 :
+            plant_data["burn_amount"] += (plant_data["current_photosynthesis"]-100)
+            plant_data["current_photosynthesis"] = 100
 
     return plant_data
 
@@ -237,17 +237,17 @@ def totalizer_calc(plant_data,name):
         delta_d = (delta.seconds / 86400)
         plant_calc_data = collection_nfts[name,'plant_calc_data']
         #This sections performs an integral on the various properties for use in determining total berries produced.
-        plant_calc_data["total_water"] += (delta_d**2*((plant_data["current_water"]-plant_calc_data["previous_water"])/(delta_d))/2)+plant_calc_data["previous_water"]*delta_d
-        plant_calc_data["total_bugs"] += (delta_d**2*(((1-plant_data["current_bugs"])-(1-plant_calc_data["previous_bugs"]))/(delta_d))/2)+(1-plant_calc_data["previous_bugs"])*delta_d
-        plant_calc_data["total_nutrients"] += (delta_d**2*((plant_data["current_nutrients"]-plant_calc_data["previous_nutrients"])/(delta_d))/2)+plant_calc_data["previous_nutrients"]*delta_d
-        plant_calc_data["total_weeds"] += (delta_d**2*(((1-plant_data["current_weeds"])-(1-plant_calc_data["previous_weeds"]))/(delta_d))/2)+(1-plant_calc_data["previous_weeds"])*delta_d
+        plant_calc_data["total_water"] += (delta_d**2*((plant_calc_data["current_water"]/100-plant_calc_data["previous_water"]/100)/(delta_d))/2)+plant_calc_data["previous_water"]/100*delta_d
+        plant_calc_data["total_bugs"] += (delta_d**2*(((1-plant_calc_data["current_bugs"]/100)-(1-plant_calc_data["previous_bugs"]/100))/(delta_d))/2)+(1-plant_calc_data["previous_bugs"]/100)*delta_d
+        plant_calc_data["total_nutrients"] += (delta_d**2*((plant_calc_data["current_nutrients"]/100-plant_calc_data["previous_nutrients"]/100)/(delta_d))/2)+plant_calc_data["previous_nutrients"]/100*delta_d
+        plant_calc_data["total_weeds"] += (delta_d**2*(((1-plant_calc_data["current_weeds"]/100)-(1-plant_calc_data["previous_weeds"]/100))/(delta_d))/2)+(1-plant_calc_data["previous_weeds"]/100)*delta_d
         collection_nfts[name,'plant_calc_data'] = plant_calc_data
         plant_data['last_calc'] = now
 
     return plant_data
 
 def dead_check(plant_data):
-    if plant_data["current_toxicity"] >= 1 or plant_data["current_bugs"] >= 1 or plant_data["current_weeds"] >= 1:
+    if plant_data["current_toxicity"] >= 100 or plant_data["current_bugs"] >= 100 or plant_data["current_weeds"] >= 100:
         plant_data["alive"] = False
     if plant_data["current_water"] <= 0 or plant_data["current_nutrients"] <= 0:
         plant_data["alive"] = False
@@ -261,9 +261,9 @@ def water(plant_generation : int, plant_number : int, num_times : int):
     name = plant_all['name']
 
     for x in range(0, num_times):
-        plant_data['current_water'] += (random.randint(5, 15))/100
-    if plant_data['current_water'] > 1 : #water can't be above 1
-        plant_data['current_water'] = 1
+        plant_data['current_water'] += (random.randint(5, 15))
+    if plant_data['current_water'] > 100 : #water can't be above 1
+        plant_data['current_water'] = 100
 
     plant_name['nft_metadata'] = plant_data
     collection_nfts[name] = plant_name
@@ -278,7 +278,7 @@ def squash_bugs(plant_generation : int, plant_number : int):
     t_delta = plant_data["last_squash_weed"] + datetime.timedelta(minutes = 5)
     assert now > t_delta, f"You are still squashing bugs or pulling weeds. Try again at {t_delta}."
 
-    plant_data['current_bugs'] -= (random.randint(2, 5))/100
+    plant_data['current_bugs'] -= (random.randint(2, 5))
     if plant_data['current_bugs'] < 0 :
         plant_data['current_bugs'] = 0
 
@@ -293,9 +293,9 @@ def spray_bugs(plant_generation : int, plant_number : int):
     plant_name = plant_all['plant_name']
     name = plant_all['name']
 
-    plant_data['current_toxicity'] += (random.randint(1, 3))/100
+    plant_data['current_toxicity'] += (random.randint(1, 3))
 
-    plant_data['current_bugs'] -= (random.randint(10, 20))/100
+    plant_data['current_bugs'] -= (random.randint(10, 20))
     if plant_data['current_bugs'] < 0 :
         plant_data['current_bugs'] = 0
 
@@ -314,12 +314,12 @@ def grow_lights(plant_generation : int, plant_number : int):
     assert now > t_delta, f"You have used a grow light or shade too recently. Try again at {t_delta}."
 
     payment(plant_generation, 5)
-    plant_data['current_photosynthesis'] += (random.randint(3, 5))/100
+    plant_data['current_photosynthesis'] += (random.randint(3, 5))
     plant_data["last_grow_light"] = now
 
-    if plant_data["current_photosynthesis"] > 1 :
-        plant_data["burn_amount"] += (plant_data["current_photosynthesis"]-1)
-        plant_data["current_photosynthesis"] = 1
+    if plant_data["current_photosynthesis"] > 100 :
+        plant_data["burn_amount"] += (plant_data["current_photosynthesis"]-100)
+        plant_data["current_photosynthesis"] = 100
 
     plant_name['nft_metadata'] = plant_data
     collection_nfts[name] = plant_name
@@ -334,12 +334,12 @@ def shade_plant(plant_generation : int, plant_number : int):
     t_delta = plant_data["last_grow_light"] + datetime.timedelta(days = 1)
     assert now > t_delta, f"You have used a grow light or shade too recently. Try again at {t_delta}."
 
-    plant_data['current_photosynthesis'] -= (random.randint(3, 5))/100
+    plant_data['current_photosynthesis'] -= (random.randint(3, 5))
     plant_data["last_grow_light"] = now
 
-    if plant_data["current_photosynthesis"] > 1 :
-        plant_data["burn_amount"] += (plant_data["current_photosynthesis"]-1)
-        plant_data["current_photosynthesis"] = 1
+    if plant_data["current_photosynthesis"] > 100 :
+        plant_data["burn_amount"] += (plant_data["current_photosynthesis"]-100)
+        plant_data["current_photosynthesis"] = 100
 
     plant_name['nft_metadata'] = plant_data
     collection_nfts[name] = plant_name
@@ -353,11 +353,11 @@ def fertilize(plant_generation : int, plant_number : int, num_times : int): #inc
 
     payment(plant_generation, 2*num_times)
     for x in range(0, num_times):
-        plant_data['current_nutrients'] += (random.randint(3, 5))/100
+        plant_data['current_nutrients'] += (random.randint(3, 5))
 
-    if plant_data['current_nutrients'] > 1 :
-        plant_data["burn_amount"] += (plant_data['current_nutrients']-1)
-        plant_data['current_nutrients'] = 1
+    if plant_data['current_nutrients'] > 100 :
+        plant_data["burn_amount"] += (plant_data['current_nutrients']-100)
+        plant_data['current_nutrients'] = 100
 
     plant_name['nft_metadata'] = plant_data
     collection_nfts[name] = plant_name
@@ -373,7 +373,7 @@ def pull_weeds(plant_generation : int, plant_number : int): #reduces current wee
     t_delta = plant_data["last_squash_weed"] + datetime.timedelta(minutes = 5)
     assert now > t_delta, f"You are still squashing bugs or pulling weeds. Try again at {t_delta}."
 
-    plant_data['current_weeds'] -= (random.randint(2, 5))/100
+    plant_data['current_weeds'] -= (random.randint(2, 5))
     if plant_data['current_weeds'] < 0 :
         plant_data['current_weeds'] = 0
 
@@ -388,9 +388,9 @@ def spray_weeds(plant_generation : int, plant_number : int):
     plant_name = plant_all['plant_name']
     name = plant_all['name']
 
-    plant_data['current_toxicity'] += (random.randint(1, 3))/100
+    plant_data['current_toxicity'] += (random.randint(1, 3))
 
-    plant_data['current_weeds'] -= (random.randint(10, 20))/100
+    plant_data['current_weeds'] -= (random.randint(10, 20))
     if plant_data['current_weeds'] < 0 :
         plant_data['current_weeds'] = 0
 
@@ -415,10 +415,10 @@ def finalize_plant(plant_generation : int, plant_number : int): #Finalizes your 
 
     plant_calc_data = collection_nfts[name,'plant_calc_data']
     #This sections performs an integral on the various properties for use in determining total berries produced.
-    plant_calc_data["total_water"] += (delta_d**2*((plant_calc_data["current_water"]-plant_calc_data["previous_water"])/(delta_d))/2)+plant_calc_data["previous_water"]*delta_d
-    plant_calc_data["total_bugs"] += (delta_d**2*(((1-plant_calc_data["current_bugs"])-(1-plant_calc_data["previous_bugs"]))/(delta_d))/2)+(1-plant_calc_data["previous_bugs"])*delta_d
-    plant_calc_data["total_nutrients"] += (delta_d**2*((plant_calc_data["current_nutrients"]-plant_calc_data["previous_nutrients"])/(delta_d))/2)+plant_calc_data["previous_nutrients"]*delta_d
-    plant_calc_data["total_weeds"] += (delta_d**2*(((1-plant_calc_data["current_weeds"])-(1-plant_calc_data["previous_weeds"]))/(delta_d))/2)+(1-plant_calc_data["previous_weeds"])*delta_d
+    plant_calc_data["total_water"] += (delta_d**2*((plant_calc_data["current_water"]/100-plant_calc_data["previous_water"]/100)/(delta_d))/2)+plant_calc_data["previous_water"]/100*delta_d
+    plant_calc_data["total_bugs"] += (delta_d**2*(((1-plant_calc_data["current_bugs"]/100)-(1-plant_calc_data["previous_bugs"]/100))/(delta_d))/2)+(1-plant_calc_data["previous_bugs"]/100)*delta_d
+    plant_calc_data["total_nutrients"] += (delta_d**2*((plant_calc_data["current_nutrients"]/100-plant_calc_data["previous_nutrients"]/100)/(delta_d))/2)+plant_calc_data["previous_nutrients"]/100*delta_d
+    plant_calc_data["total_weeds"] += (delta_d**2*(((1-plant_calc_data["current_weeds"]/100)-(1-plant_calc_data["previous_weeds"]/100))/(delta_d))/2)+(1-plant_calc_data["previous_weeds"]/100)*delta_d
 
     collection_nfts[name,'plant_calc_data'] = plant_calc_data
 
@@ -427,7 +427,7 @@ def finalize_plant(plant_generation : int, plant_number : int): #Finalizes your 
     collection_nfts[name] = plant_name
 
     length = metadata['growing_season_length']
-    berries = int(1000 * ((plant_calc_data["total_water"]*plant_calc_data["total_bugs"]*plant_calc_data["total_nutrients"]*plant_calc_data["total_weeds"])/(length**4))*(1-plant_data['current_toxicity'])*(plant_data["current_photosynthesis"])*(1-plant_data["burn_amount"]))
+    berries = int(1000 * ((plant_calc_data["total_water"]*plant_calc_data["total_bugs"]*plant_calc_data["total_nutrients"]*plant_calc_data["total_weeds"])/(length**4))*(1-plant_data['current_toxicity']/100)*(plant_data["current_photosynthesis"]/100)*(1-plant_data["burn_amount"]/100))
     collection_nfts[name,'berries'] = berries
     collection_nfts[name,'final_score'] = berries
     plants[plant_generation,'total_berries'] += berries

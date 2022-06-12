@@ -49,11 +49,11 @@ def lawn_gnomes(plant_data):
     return plant_data
 
 def solar_eclipse(plant_data):
-    plant_data["current_photosynthesis"] -= (random.randint(3, 15))
+    plant_data["current_photosynthesis"] -= (random.randint(3, 10))
     return plant_data
 
 def solar_flare(plant_data):
-    plant_data["current_photosynthesis"] += (random.randint(3, 15))
+    plant_data["current_photosynthesis"] += (random.randint(3, 10))
     return plant_data
 
 def extra_manure(plant_data):
