@@ -179,17 +179,17 @@ def action_setup(plant_generation : int, plant_number : int):
 
     #interaction idle check. If idle too long, plant gets penalized.
     if now > plant_data['last_interaction'] + datetime.timedelta(hours = 12):
-        plant_data["current_water"] -= (random.randint(1, 10))/100
-        plant_data["current_bugs"] += (random.randint(1, 10))/100
-        plant_data["current_nutrients"] -= (random.randint(1, 10))/100
-        plant_data["current_weeds"] += (random.randint(1, 10))/100
+        plant_data["current_water"] -= (random.randint(5, 15))/100
+        plant_data["current_bugs"] += (random.randint(5, 15))/100
+        plant_data["current_nutrients"] -= (random.randint(5, 15))/100
+        plant_data["current_weeds"] += (random.randint(5, 15))/100
 
     plant_data = daily_conditions(plant_data)
     plant_data = totalizer_calc(plant_data,name)
 
     if (random.randint(1, 10)) == 10 : #10% chance of an event happening
         event_contract = importlib.import_module(metadata['event_handler'])
-        event_contract.event(plant_data)
+        plant_data = event_contract.event(plant_data)
 
     plant_data = dead_check(plant_data)
     plant_data['last_interaction'] = now #resets the interaction time
@@ -206,13 +206,13 @@ def daily_conditions(plant_data):
     while now - plant_data["last_daily"] > datetime.timedelta(days = 1): #Loops through to calculate changes to plant if it's been more than a day since the last day's changes. Does multiple days worth too if needed
         current_weather = random.randint(1, 3) # 1=sunny 2=cloudy 3=rainy
         if current_weather == 1:
-            plant_data["current_water"] -= (random.randint(15, 25))/100 #how much water is lost each sunny day
+            plant_data["current_water"] -= (random.randint(10, 20))/100 #how much water is lost each sunny day
             plant_data["current_photosynthesis"] += (random.randint(4, 6))/100 #How much photosynthesis increases each sunny day
         if current_weather == 2:
             plant_data["current_water"] -= (random.randint(5, 15))/100 #how much water is lost each cloudy day
             plant_data["current_photosynthesis"] += (random.randint(2, 4))/100 #How much photosynthesis increases each cloudy day
         if current_weather == 3:
-            plant_data["current_water"] += (random.randint(5, 40))/100 #how much water is gained each rainy day
+            plant_data["current_water"] += (random.randint(5, 25))/100 #how much water is gained each rainy day
             plant_data["current_photosynthesis"] += (random.randint(1, 2))/100 #How much photosynthesis increases each rainy day
 
         plant_data["current_bugs"] += (random.randint(3, 15))/100 #how many bugs are added each day
