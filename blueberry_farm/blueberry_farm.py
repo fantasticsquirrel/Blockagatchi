@@ -187,7 +187,7 @@ def action_setup(plant_generation : int, plant_number : int):
     plant_data = daily_conditions(plant_data)
     plant_data = totalizer_calc(plant_data,name)
 
-    if (random.randint(1, 10)) = 10 : #10% chance of an event happening
+    if (random.randint(1, 10)) == 10 : #10% chance of an event happening
         event_contract = importlib.import_module(metadata['event_handler'])
         event_contract.event(plant_data)
 
