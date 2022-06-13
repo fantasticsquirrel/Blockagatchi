@@ -11,6 +11,7 @@ collection_balances_approvals = Hash(default_value=0) # Approval amounts of cert
 market = Hash(default_value=0) # Stores NFTs up for sale
 plants = Hash(default_value=0)
 metadata = Hash()
+nicknames = Hash()
 
 random.seed()
 
@@ -29,6 +30,8 @@ def seed(name: str):
     plants['growing_season_start_time'] = now
     plants['count'] = 0
     plants['active_generation'] = -1
+
+    nicknames = {}
 
 
 @export
@@ -465,5 +468,31 @@ def stale_claims(plant_generation : int): #used by the operator to claim tau fro
     currency.transfer(amount=stale_tau, to=ctx.caller)
 
 @export
-def emergency_withdraw():
-    #add ability to withdraw tau from contract by operator only
+def nickname(plant_generation : int, plant_number : int, nick : str):
+    name = f'Gen_{plant_generation}_{plant_number}'
+    assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
+    assert bool(collection_nfts[nick]) == False, "This nickname already exists."
+    payment(plant_generation, 25)
+    collection_nfts[nick] = [plant_generation , plant_number]
+
+@export
+def nickname_interaction(nickname : str, function_name :str):
+    nick = collection_nfts[nickname]
+
+    function_names = {
+        'water' : water,
+        'squash_bugs' : squash_bugs,
+        'spray_bugs' : spray_bugs,
+        'grow_lights' : grow_lights,
+        'shade_plant' : shade_plant,
+        'fertilize' : fertilize,
+        'pull_weeds' : pull_weeds,
+        'spray_weeds' : spray_weeds
+    }
+
+    function_names[function_name](nick[0],nick[1])
+
+@export
+def emergency_withdraw(amount:float): #temporary function used in testing. will be removed from final contract.
+    assert metadata['operator'] == ctx.caller, "Only the operator can claim tau."
+    currency.transfer(amount=amount, to=ctx.caller)

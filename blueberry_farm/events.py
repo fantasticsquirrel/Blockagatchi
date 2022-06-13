@@ -1,27 +1,30 @@
 random.seed()
 last_event = Variable()
 
+@construct
+def seed():
+    last_event.set(0)
+
 def event(plant_data):
 
     events = {
-        1 : "freak_rain", #extra water
-        2 : "hot_day", #lose water
-        3 : "swarm", #more bugs
-        4 : "birds", #less bugs
-        5 : "toxic_rain", #increase toxicity
-        6 : "lawn_gnomes", #decrease toxicity
-        7 : "solar_eclipse", #less photosynthesis
-        8 : "solar_flare", #more photosynthesis
-        9 : "extra_manure", #increased nutrients
-        10 : "greedy_weeds", #decreased nutrients
-        11 : "fertilizer_backfire", #increased weeds
-        12 : "friendly_snails" #decreased weeds
+        1 : freak_rain, #extra water
+        2 : hot_day, #lose water
+        3 : swarm, #more bugs
+        4 : birds, #less bugs
+        5 : toxic_rain, #increase toxicity
+        6 : lawn_gnomes, #decrease toxicity
+        7 : solar_eclipse, #less photosynthesis
+        8 : solar_flare, #more photosynthesis
+        9 : extra_manure, #increased nutrients
+        10 : greedy_weeds, #decreased nutrients
+        11 : fertilizer_backfire, #increased weeds
+        12 : friendly_snails #decreased weeds
     }
 
     event_num = (random.randint(1, 12))
-    event_choice = events[event_num]
-    last_event.set(event_choice)
-    event_choice(plant_data)
+    last_event.set(event_num)
+    plant_data = events[event_num](plant_data)
     return plant_data
 
 def freak_rain(plant_data):
