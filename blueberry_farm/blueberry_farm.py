@@ -16,15 +16,15 @@ nicknames = Hash()
 random.seed()
 
 @construct
-def seed(name: str):
-    collection_name.set(name) # Sets the name
+def seed():
+    collection_name.set("Test_plants") # Sets the name
     collection_owner.set(ctx.caller) # Sets the owner
     metadata['operator'] = ctx.caller
     metadata['royalties'] = 0.05
 
-    metadata['growing_season_length'] = 30
-    metadata['plant price'] = 100
-    metadata['event_handler'] = 'con_farm_events_01'
+    metadata['growing_season_length'] = 4 #change back to 30
+    metadata['plant price'] = 1 #change back to 100
+    metadata['event_handler'] = 'con_bbf_events_01'
 
     plants['growing_season'] = False
     plants['growing_season_start_time'] = now
@@ -118,6 +118,7 @@ def start_growing_season():
     plants['growing_season_start_time'] = now
     plants['growing_season_end_time'] =  now + datetime.timedelta(days = growing_season_length)
     plants['finalize_time'] = now + datetime.timedelta(days = growing_season_length + 3)
+    plants['active_generation'] = active_gen
     plants[active_gen, 'total_berries'] = 0
     plants[active_gen, 'total_tau'] = 0
     plants[active_gen,'stale_claim_time'] = now + datetime.timedelta(days = growing_season_length + 30)
@@ -126,14 +127,10 @@ def start_growing_season():
 @export
 def buy_plant():
     assert plants['growing_season'] == True, 'The growing season has not started, so you cannot buy a plant.'
-    assert plants['growing_season_end_time'] >= now + datetime.timedelta(days = 25), "It's too far into the growing season and you cannot buy a plant now."
+    #assert plants['growing_season_end_time'] >= now + datetime.timedelta(days = 25), "It's too far into the growing season and you cannot buy a plant now."
     plant_generation = plants['active_generation']
 
     plant_data = {
-        #"drought_resist": (random.randint(0, 25)),
-        #"crop_yield": (random.randint(90, 110)),
-        #"bug_resist": (random.randint(0, 25)),
-        #"photosynthesis_rate": (random.randint(90, 110)),
         "current_water": (random.randint(50, 80)),
         "current_bugs" : (random.randint(5, 25)),
         "current_photosynthesis" : 0,
@@ -228,6 +225,9 @@ def daily_conditions(plant_data):
         if plant_data['current_water'] > 100 : #water can't be above 1
             plant_data['current_water'] = 100
 
+        if plant_data['current_water'] < 0 : #water can't be above 1
+            plant_data['current_water'] = 0
+
         if plant_data["current_photosynthesis"] > 100 :
             plant_data["burn_amount"] += (plant_data["current_photosynthesis"]-100)
             plant_data["current_photosynthesis"] = 100
@@ -240,10 +240,10 @@ def totalizer_calc(plant_data,name):
         delta_d = (delta.seconds / 86400)
         plant_calc_data = collection_nfts[name,'plant_calc_data']
         #This sections performs an integral on the various properties for use in determining total berries produced.
-        plant_calc_data["total_water"] += (delta_d**2*((plant_calc_data["current_water"]/100-plant_calc_data["previous_water"]/100)/(delta_d))/2)+plant_calc_data["previous_water"]/100*delta_d
-        plant_calc_data["total_bugs"] += (delta_d**2*(((1-plant_calc_data["current_bugs"]/100)-(1-plant_calc_data["previous_bugs"]/100))/(delta_d))/2)+(1-plant_calc_data["previous_bugs"]/100)*delta_d
-        plant_calc_data["total_nutrients"] += (delta_d**2*((plant_calc_data["current_nutrients"]/100-plant_calc_data["previous_nutrients"]/100)/(delta_d))/2)+plant_calc_data["previous_nutrients"]/100*delta_d
-        plant_calc_data["total_weeds"] += (delta_d**2*(((1-plant_calc_data["current_weeds"]/100)-(1-plant_calc_data["previous_weeds"]/100))/(delta_d))/2)+(1-plant_calc_data["previous_weeds"]/100)*delta_d
+        plant_calc_data["total_water"] += (delta_d**2*((plant_data["current_water"]/100-plant_calc_data["previous_water"]/100)/(delta_d))/2)+plant_calc_data["previous_water"]/100*delta_d
+        plant_calc_data["total_bugs"] += (delta_d**2*(((1-plant_data["current_bugs"]/100)-(1-plant_calc_data["previous_bugs"]/100))/(delta_d))/2)+(1-plant_calc_data["previous_bugs"]/100)*delta_d
+        plant_calc_data["total_nutrients"] += (delta_d**2*((plant_data["current_nutrients"]/100-plant_calc_data["previous_nutrients"]/100)/(delta_d))/2)+plant_calc_data["previous_nutrients"]/100*delta_d
+        plant_calc_data["total_weeds"] += (delta_d**2*(((1-plant_data["current_weeds"]/100)-(1-plant_calc_data["previous_weeds"]/100))/(delta_d))/2)+(1-plant_calc_data["previous_weeds"]/100)*delta_d
         collection_nfts[name,'plant_calc_data'] = plant_calc_data
         plant_data['last_calc'] = now
 
@@ -257,7 +257,7 @@ def dead_check(plant_data):
     return plant_data
 
 @export
-def water(plant_generation : int, plant_number : int, num_times : int):
+def water(plant_generation : int, plant_number : int, num_times : int = 1):
     plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
     plant_name = plant_all['plant_name']
@@ -348,7 +348,7 @@ def shade_plant(plant_generation : int, plant_number : int):
     collection_nfts[name] = plant_name
 
 @export
-def fertilize(plant_generation : int, plant_number : int, num_times : int): #increases nutrients of the plant
+def fertilize(plant_generation : int, plant_number : int, num_times : int = 1): #increases nutrients of the plant
     plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
     plant_name = plant_all['plant_name']
@@ -418,10 +418,10 @@ def finalize_plant(plant_generation : int, plant_number : int): #Finalizes your 
 
     plant_calc_data = collection_nfts[name,'plant_calc_data']
     #This sections performs an integral on the various properties for use in determining total berries produced.
-    plant_calc_data["total_water"] += (delta_d**2*((plant_calc_data["current_water"]/100-plant_calc_data["previous_water"]/100)/(delta_d))/2)+plant_calc_data["previous_water"]/100*delta_d
-    plant_calc_data["total_bugs"] += (delta_d**2*(((1-plant_calc_data["current_bugs"]/100)-(1-plant_calc_data["previous_bugs"]/100))/(delta_d))/2)+(1-plant_calc_data["previous_bugs"]/100)*delta_d
-    plant_calc_data["total_nutrients"] += (delta_d**2*((plant_calc_data["current_nutrients"]/100-plant_calc_data["previous_nutrients"]/100)/(delta_d))/2)+plant_calc_data["previous_nutrients"]/100*delta_d
-    plant_calc_data["total_weeds"] += (delta_d**2*(((1-plant_calc_data["current_weeds"]/100)-(1-plant_calc_data["previous_weeds"]/100))/(delta_d))/2)+(1-plant_calc_data["previous_weeds"]/100)*delta_d
+    plant_calc_data["total_water"] += (delta_d**2*((plant_data["current_water"]/100-plant_calc_data["previous_water"]/100)/(delta_d))/2)+plant_calc_data["previous_water"]/100*delta_d
+    plant_calc_data["total_bugs"] += (delta_d**2*(((1-plant_data["current_bugs"]/100)-(1-plant_calc_data["previous_bugs"]/100))/(delta_d))/2)+(1-plant_calc_data["previous_bugs"]/100)*delta_d
+    plant_calc_data["total_nutrients"] += (delta_d**2*((plant_data["current_nutrients"]/100-plant_calc_data["previous_nutrients"]/100)/(delta_d))/2)+plant_calc_data["previous_nutrients"]/100*delta_d
+    plant_calc_data["total_weeds"] += (delta_d**2*(((1-plant_data["current_weeds"]/100)-(1-plant_calc_data["previous_weeds"]/100))/(delta_d))/2)+(1-plant_calc_data["previous_weeds"]/100)*delta_d
 
     collection_nfts[name,'plant_calc_data'] = plant_calc_data
 
@@ -472,7 +472,7 @@ def nickname(plant_generation : int, plant_number : int, nick : str):
     name = f'Gen_{plant_generation}_{plant_number}'
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
     assert bool(collection_nfts[nick]) == False, "This nickname already exists."
-    payment(plant_generation, 25)
+    payment(plant_generation, 2)
     collection_nfts[nick] = [plant_generation , plant_number]
 
 @export
@@ -496,3 +496,8 @@ def nickname_interaction(nickname : str, function_name :str):
 def emergency_withdraw(amount:float): #temporary function used in testing. will be removed from final contract.
     assert metadata['operator'] == ctx.caller, "Only the operator can claim tau."
     currency.transfer(amount=amount, to=ctx.caller)
+
+        #"drought_resist": (random.randint(0, 25)),
+        #"crop_yield": (random.randint(90, 110)),
+        #"bug_resist": (random.randint(0, 25)),
+        #"photosynthesis_rate": (random.randint(90, 110)),

@@ -5,9 +5,10 @@ last_event = Variable()
 def seed():
     last_event.set(0)
 
-def event(plant_data):
+@export
+def event(plant_data: dict):
 
-    events = {
+    event_names = {
         1 : freak_rain, #extra water
         2 : hot_day, #lose water
         3 : swarm, #more bugs
@@ -24,8 +25,7 @@ def event(plant_data):
 
     event_num = (random.randint(1, 12))
     last_event.set(event_num)
-    plant_data = events[event_num](plant_data)
-    return plant_data
+    event_names[event_num](plant_data)
 
 def freak_rain(plant_data):
     plant_data["current_water"] += (random.randint(3, 15))
