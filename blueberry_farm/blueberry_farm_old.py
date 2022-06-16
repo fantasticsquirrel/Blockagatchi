@@ -47,8 +47,7 @@ def mint_nft(name: str, description: str, ipfs_image_url: str, nft_metadata: dic
     assert amount > 0, "You cannot transfer negative amounts"
     #assert collection_owner.get() == ctx.caller, "Only the collection owner can mint NFTs"
 
-    collection_nfts[name] = {"description": description, "ipfs_image_url": ipfs_image_url, "nft_metadata": {}, "amount": amount} # Adds NFT to collection with all details
-    collection_nfts[name,"nft_metadata"] = nft_metadata
+    collection_nfts[name] = {"description": description, "ipfs_image_url": ipfs_image_url, "nft_metadata": nft_metadata, "amount": amount} # Adds NFT to collection with all details
     collection_balances[ctx.caller, name] = amount # Mints the NFT
 
 # standard transfer function
@@ -174,7 +173,8 @@ def action_setup(plant_generation : int, plant_number : int):
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
     assert now <= plants['growing_season_end_time'], 'The growing season is not active, so you cannot interact with your plant.'
     if ctx.caller.startswith('con_'): return
-    plant_data = collection_nfts[name,"nft_metadata"]
+    plant_name = collection_nfts[name]
+    plant_data = plant_name['nft_metadata']
     assert plant_data["alive"] == True, 'Your plant is dead due to neglect and you must buy a new plant to try again. Try not to kill it too.'
 
     #interaction idle check. If idle too long, plant gets penalized.
@@ -195,6 +195,7 @@ def action_setup(plant_generation : int, plant_number : int):
     plant_data['last_interaction'] = now #resets the interaction time
 
     plant_all = {
+        'plant_name' : plant_name,
         'plant_data' : plant_data,
         'name' : name
     }
@@ -264,6 +265,7 @@ def dead_check(plant_data):
 def water(plant_generation : int, plant_number : int, num_times : int = 1):
     plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
+    plant_name = plant_all['plant_name']
     name = plant_all['name']
 
     for x in range(0, num_times):
@@ -271,12 +273,14 @@ def water(plant_generation : int, plant_number : int, num_times : int = 1):
     if plant_data['current_water'] > 100 : #water can't be above 1
         plant_data['current_water'] = 100
 
-    collection_nfts[name,"nft_metadata"] = plant_data
+    plant_name['nft_metadata'] = plant_data
+    collection_nfts[name] = plant_name
 
 @export
 def squash(plant_generation : int, plant_number : int):
     plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
+    plant_name = plant_all['plant_name']
     name = plant_all['name']
 
     t_delta = plant_data["last_squash_weed"] + datetime.timedelta(minutes = 5)
@@ -287,12 +291,14 @@ def squash(plant_generation : int, plant_number : int):
         plant_data['current_bugs'] = 0
 
     plant_data["last_squash_weed"] = now
-    collection_nfts[name,"nft_metadata"] = plant_data
+    plant_name['nft_metadata'] = plant_data
+    collection_nfts[name] = plant_name
 
 @export
 def spraybugs(plant_generation : int, plant_number : int):
     plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
+    plant_name = plant_all['plant_name']
     name = plant_all['name']
 
     plant_data['current_toxicity'] += (random.randint(1, 3))
@@ -302,12 +308,14 @@ def spraybugs(plant_generation : int, plant_number : int):
         plant_data['current_bugs'] = 0
 
     payment(plant_generation, 5)
-    collection_nfts[name,"nft_metadata"] = plant_data
+    plant_name['nft_metadata'] = plant_data
+    collection_nfts[name] = plant_name
 
 @export
 def growlights(plant_generation : int, plant_number : int):
     plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
+    plant_name = plant_all['plant_name']
     name = plant_all['name']
 
     t_delta = plant_data["last_grow_light"] + datetime.timedelta(days = 1)
@@ -321,12 +329,14 @@ def growlights(plant_generation : int, plant_number : int):
         plant_data["burn_amount"] += (plant_data["current_photosynthesis"]-100)
         plant_data["current_photosynthesis"] = 100
 
-    collection_nfts[name,"nft_metadata"] = plant_data
+    plant_name['nft_metadata'] = plant_data
+    collection_nfts[name] = plant_name
 
 @export
 def shade(plant_generation : int, plant_number : int):
     plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
+    plant_name = plant_all['plant_name']
     name = plant_all['name']
 
     t_delta = plant_data["last_grow_light"] + datetime.timedelta(days = 1)
@@ -339,12 +349,14 @@ def shade(plant_generation : int, plant_number : int):
         plant_data["burn_amount"] += (plant_data["current_photosynthesis"]-100)
         plant_data["current_photosynthesis"] = 100
 
-    collection_nfts[name,"nft_metadata"] = plant_data
+    plant_name['nft_metadata'] = plant_data
+    collection_nfts[name] = plant_name
 
 @export
 def fertilize(plant_generation : int, plant_number : int, num_times : int = 1): #increases nutrients of the plant
     plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
+    plant_name = plant_all['plant_name']
     name = plant_all['name']
 
     payment(plant_generation, 2*num_times)
@@ -355,13 +367,15 @@ def fertilize(plant_generation : int, plant_number : int, num_times : int = 1): 
         plant_data["burn_amount"] += (plant_data['current_nutrients']-100)
         plant_data['current_nutrients'] = 100
 
-    collection_nfts[name,"nft_metadata"] = plant_data
+    plant_name['nft_metadata'] = plant_data
+    collection_nfts[name] = plant_name
 
 @export
 def pullweeds(plant_generation : int, plant_number : int): #reduces current weeds in plant and takes 5 minutes to do. Share's a timer.
 
     plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
+    plant_name = plant_all['plant_name']
     name = plant_all['name']
 
     t_delta = plant_data["last_squash_weed"] + datetime.timedelta(minutes = 5)
@@ -372,12 +386,14 @@ def pullweeds(plant_generation : int, plant_number : int): #reduces current weed
         plant_data['current_weeds'] = 0
 
     plant_data["last_squash_weed"] = now
-    collection_nfts[name,"nft_metadata"] = plant_data
+    plant_name['nft_metadata'] = plant_data
+    collection_nfts[name] = plant_name
 
 @export
 def sprayweeds(plant_generation : int, plant_number : int):
     plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
+    plant_name = plant_all['plant_name']
     name = plant_all['name']
 
     plant_data['current_toxicity'] += (random.randint(1, 3))
@@ -386,7 +402,8 @@ def sprayweeds(plant_generation : int, plant_number : int):
     if plant_data['current_weeds'] < 0 :
         plant_data['current_weeds'] = 0
 
-    collection_nfts[name,"nft_metadata"] = plant_data
+    plant_name['nft_metadata'] = plant_data
+    collection_nfts[name] = plant_name
 
 @export
 def finalize_plant(plant_generation : int, plant_number : int): #Finalizes your plant at the end of growing season to deterimine your berry yield.
@@ -397,7 +414,8 @@ def finalize_plant(plant_generation : int, plant_number : int): #Finalizes your 
     end_time = plants['growing_season_end_time']
     assert now <= plants['finalize_time'] and now >= end_time, 'It is not time to finalize your plant.'
     if ctx.caller.startswith('con_'): return
-    plant_data = collection_nfts[name,"nft_metadata"]
+    plant_name = collection_nfts[name]
+    plant_data = plant_name['nft_metadata']
     assert plant_data["alive"] == True, 'Your plant is dead due to neglect and you must buy a new plant to try again. Try not to kill it too.'
 
     delta = end_time - plant_data['last_calc']
@@ -413,7 +431,8 @@ def finalize_plant(plant_generation : int, plant_number : int): #Finalizes your 
     collection_nfts[name,'plant_calc_data'] = plant_calc_data
 
     plant_data['last_calc'] = now
-    collection_nfts[name,"nft_metadata"] = plant_data
+    plant_name['nft_metadata'] = plant_data
+    collection_nfts[name] = plant_name
 
     length = metadata['growing_season_length']
     berries = int(1000 * ((plant_calc_data["total_water"]*plant_calc_data["total_bugs"]*plant_calc_data["total_nutrients"]*plant_calc_data["total_weeds"])/(length**4))*(1-plant_data['current_toxicity']/100)*(plant_data["current_photosynthesis"]/100)*(1-plant_data["burn_amount"]/100))
