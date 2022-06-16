@@ -455,7 +455,7 @@ def sell_berries(plant_generation : int, plant_number : int): #redeem berries fo
 
 def payment(plant_generation, amount): #used to process payments
     dev_reward = 0.05
-    currency.transfer_from(amount=amount*(1-dev_reward)), to=ctx.this, main_account=ctx.caller)
+    currency.transfer_from(amount=amount*(1-dev_reward), to=ctx.this, main_account=ctx.caller)
     currency.transfer_from(amount=amount*dev_reward, to=metadata['operator'], main_account=ctx.caller)
     plants[plant_generation, 'total_tau'] += amount*(1-dev_reward)
 
@@ -477,7 +477,7 @@ def stale_claims(plant_generation : int): #used by the operator to claim tau fro
 def nickname(plant_generation : int, plant_number : int, nick : str):
     name = f'Gen_{plant_generation}_{plant_number}'
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
-    assert not isinstance(nick, int), "The plant nickname can't be an integer."
+    assert not nick.isdigit(), "The plant nickname can't be an integer."
     assert bool(collection_nfts[nick]) == False, "This nickname already exists."
     assert nick.isalnum() == True, "Only alphanumeric characters allowed."
     assert nick != "", "Name cannot be empty"
