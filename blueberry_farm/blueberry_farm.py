@@ -187,9 +187,9 @@ def action_setup(plant_generation : int, plant_number : int):
     plant_data = daily_conditions(plant_data)
     plant_data = totalizer_calc(plant_data,name)
 
-    if (random.randint(1, 10)) == 10 : #10% chance of an event happening
-        event_contract = importlib.import_module(metadata['event_handler'])
-        plant_data = event_contract.event(plant_data)
+    #if (random.randint(1, 10)) == 10 : #10% chance of an event happening #RANDOM EVENTS NOT WORKING. COMMENTING OUT UNTIL FIXED
+    #    event_contract = importlib.import_module(metadata['event_handler'])
+    #    plant_data = event_contract.event(plant_data)
 
     plant_data = dead_check(plant_data)
     plant_data['last_interaction'] = now #resets the interaction time
@@ -225,7 +225,7 @@ def daily_conditions(plant_data):
         if plant_data['current_water'] > 100 : #water can't be above 1
             plant_data['current_water'] = 100
 
-        if plant_data['current_water'] < 0 : #water can't be above 1
+        if plant_data['current_water'] < 0 : #water can't be below 1
             plant_data['current_water'] = 0
 
         if plant_data["current_photosynthesis"] > 100 :
@@ -246,6 +246,11 @@ def totalizer_calc(plant_data,name):
         plant_calc_data["total_weeds"] += (delta_d**2*(((1-plant_data["current_weeds"]/100)-(1-plant_calc_data["previous_weeds"]/100))/(delta_d))/2)+(1-plant_calc_data["previous_weeds"]/100)*delta_d
         collection_nfts[name,'plant_calc_data'] = plant_calc_data
         plant_data['last_calc'] = now
+        #Updates previous values for next calculation period.
+        plant_calc_data["previous_water"] = plant_data["current_water"]
+        plant_calc_data["previous_bugs"] = plant_data["current_bugs"]
+        plant_calc_data["previous_nutrients"] = plant_data["current_nutrients"]
+        plant_calc_data["previous_weeds"] = plant_data["current_weeds"]
 
     return plant_data
 
@@ -272,7 +277,7 @@ def water(plant_generation : int, plant_number : int, num_times : int = 1):
     collection_nfts[name] = plant_name
 
 @export
-def squash_bugs(plant_generation : int, plant_number : int):
+def squash(plant_generation : int, plant_number : int):
     plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
     plant_name = plant_all['plant_name']
@@ -290,7 +295,7 @@ def squash_bugs(plant_generation : int, plant_number : int):
     collection_nfts[name] = plant_name
 
 @export
-def spray_bugs(plant_generation : int, plant_number : int):
+def spraybugs(plant_generation : int, plant_number : int):
     plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
     plant_name = plant_all['plant_name']
@@ -307,7 +312,7 @@ def spray_bugs(plant_generation : int, plant_number : int):
     collection_nfts[name] = plant_name
 
 @export
-def grow_lights(plant_generation : int, plant_number : int):
+def growlights(plant_generation : int, plant_number : int):
     plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
     plant_name = plant_all['plant_name']
@@ -328,7 +333,7 @@ def grow_lights(plant_generation : int, plant_number : int):
     collection_nfts[name] = plant_name
 
 @export
-def shade_plant(plant_generation : int, plant_number : int):
+def shade(plant_generation : int, plant_number : int):
     plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
     plant_name = plant_all['plant_name']
@@ -366,7 +371,7 @@ def fertilize(plant_generation : int, plant_number : int, num_times : int = 1): 
     collection_nfts[name] = plant_name
 
 @export
-def pull_weeds(plant_generation : int, plant_number : int): #reduces current weeds in plant and takes 5 minutes to do. Share's a timer.
+def pullweeds(plant_generation : int, plant_number : int): #reduces current weeds in plant and takes 5 minutes to do. Share's a timer.
 
     plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
@@ -385,7 +390,7 @@ def pull_weeds(plant_generation : int, plant_number : int): #reduces current wee
     collection_nfts[name] = plant_name
 
 @export
-def spray_weeds(plant_generation : int, plant_number : int):
+def sprayweeds(plant_generation : int, plant_number : int):
     plant_all = action_setup(plant_generation,plant_number) #Runs the main method that performs all of the various checks required for the plant.
     plant_data = plant_all['plant_data']
     plant_name = plant_all['plant_name']
@@ -402,7 +407,7 @@ def spray_weeds(plant_generation : int, plant_number : int):
 
 @export
 def finalize_plant(plant_generation : int, plant_number : int): #Finalizes your plant at the end of growing season to deterimine your berry yield.
-    assert plant_generation == active_generation, f'The plant you are trying to interact with is not part of the current generation. The current generation is {active_generation}.'
+    assert plant_generation == plants['active_generation'], f'The plant you are trying to interact with is not part of the current generation. The current generation is {active_generation}.'
     name = f'Gen_{plant_generation}_{plant_number}'
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
     assert collection_nfts[name,'finalized'] == False, 'This plant has already been finalized.'
@@ -449,9 +454,10 @@ def sell_berries(plant_generation : int, plant_number : int): #redeem berries fo
     plants[plant_generation, 'total_tau']  -= proceeds
 
 def payment(plant_generation, amount): #used to process payments
-    currency.transfer_from(amount=amount*0.95, to=ctx.this, main_account=ctx.caller)
-    currency.transfer_from(amount=amount*0.05, to=metadata['operator'], main_account=ctx.caller)
-    plants[plant_generation, 'total_tau'] += amount
+    dev_reward = 0.05
+    currency.transfer_from(amount=amount*(1-dev_reward)), to=ctx.this, main_account=ctx.caller)
+    currency.transfer_from(amount=amount*dev_reward, to=metadata['operator'], main_account=ctx.caller)
+    plants[plant_generation, 'total_tau'] += amount*(1-dev_reward)
 
 @export
 def manual_reward_add(plant_generation : int, amount : int): #used to manually add more tau to the prize pool
@@ -471,7 +477,11 @@ def stale_claims(plant_generation : int): #used by the operator to claim tau fro
 def nickname(plant_generation : int, plant_number : int, nick : str):
     name = f'Gen_{plant_generation}_{plant_number}'
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
+    assert not isinstance(nick, int), "The plant nickname can't be an integer."
     assert bool(collection_nfts[nick]) == False, "This nickname already exists."
+    assert nick.isalnum() == True, "Only alphanumeric characters allowed."
+    assert nick != "", "Name cannot be empty"
+    assert len(nick) >= 3, "The minimum length is 3 characters."
     payment(plant_generation, 2)
     collection_nfts[nick] = [plant_generation , plant_number]
 
@@ -481,13 +491,13 @@ def nickname_interaction(nickname : str, function_name :str):
 
     function_names = {
         'water' : water,
-        'squash_bugs' : squash_bugs,
-        'spray_bugs' : spray_bugs,
-        'grow_lights' : grow_lights,
-        'shade_plant' : shade_plant,
+        'squash' : squash,
+        'spraybugs' : spraybugs,
+        'growlights' : growlights,
+        'shade' : shade,
         'fertilize' : fertilize,
-        'pull_weeds' : pull_weeds,
-        'spray_weeds' : spray_weeds
+        'pullweeds' : pullweeds,
+        'sprayweeds' : sprayweeds
     }
 
     function_names[function_name](nick[0],nick[1])
