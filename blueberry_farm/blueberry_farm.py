@@ -7,9 +7,7 @@ collection_owner = Variable() # Only the owner can mint new NFTs for this collec
 collection_nfts = Hash(default_value=0) # All NFTs of the collection
 collection_balances = Hash(default_value=0) # All user balances of the NFTs
 collection_balances_approvals = Hash(default_value=0) # Approval amounts of certain NFTs
-
-market = Hash(default_value=0) # Stores NFTs up for sale
-plants = Hash(default_value=0)
+plants = Hash(default_value=0) #store various data related to plants and growing seasons
 metadata = Hash()
 nicknames = Hash()
 
@@ -40,7 +38,6 @@ def change_metadata(key: str, new_value: str):
     metadata[key] = new_value
 
 # function to mint a new NFT
-@export
 def mint_nft(name: str, description: str, ipfs_image_url: str, nft_metadata: dict, amount: int):
     assert name != "", "Name cannot be empty"
     assert collection_nfts[name] == 0, "Name already exists"
@@ -82,31 +79,6 @@ def transfer_from(name:str, amount:int, to: str, main_account: str):
 
     collection_balances[to, name] += amount # Adds amount to receiver
 
-# put nft up for sale in collection market
-@export
-def sell_nft(name: str, amount: int, currency_price: float):
-    assert amount > 0, 'Cannot sell negative NFT amount'
-    assert currency_price > 0, 'Cannot sell for negative balances!'
-    assert collection_balances[ctx.caller, name] > 0,'You dont own that amount of the NFT'
-
-    collection_balances[ctx.caller, name] -= amount # Removes amount from seller
-    market[ctx.caller, name] = {"amount": amount, "price": currency_price} # Adds amount to market
-
-# buy nft in collection market
-@export
-def buy_nft(name: str, seller: str, amount:int):
-    assert amount > 0, 'Cannot buy negative NFT amount'
-    assert market[seller, name]["amount"] >= amount, 'Not enough for sale'
-    royalties = metadata['royalties']
-
-    currency.transfer_from(amount=market[seller, name]["price"] * amount * (1-royalties), to=seller, main_account=ctx.caller) # Transfers TAU (minus royalties) to Seller
-    currency.transfer_from(amount=market[seller, name]["price"] * amount * royalties, to=collection_owner.get(), main_account=ctx.caller) # Transfers TAU royalties to creator
-
-    old_market_entry = market[ctx.caller, name] # Saves the old market entry for overwrite
-    market[ctx.caller, name] = {"amount": old_market_entry["amount"] - amount, "price": currency_price} # Removing the amount sold of market entry
-
-    collection_balances[ctx.caller, name] += amount # Adds amount bought to buyer
-
 @export
 def start_growing_season():
     assert collection_owner.get() == ctx.caller, "Only the owner can start a growing season."
@@ -143,7 +115,6 @@ def buy_plant():
         "last_daily" : now,
         "last_calc" : now,
         "alive" : True,
-        "generation" : plant_generation,
         "last_squash_weed" : (now + datetime.timedelta(days = -1)),
         "last_grow_light" : (now + datetime.timedelta(days = -1)),
         "burn_amount" : 0
@@ -214,17 +185,20 @@ def daily_conditions(plant_data):
             plant_data["current_water"] += (random.randint(5, 25)) #how much water is gained each rainy day
             plant_data["current_photosynthesis"] += (random.randint(1, 2)) #How much photosynthesis increases each rainy day
 
-        plant_data["current_bugs"] += (random.randint(3, 15)) #how many bugs are added each day
+        plant_data["current_bugs"] += (random.randint(5, 20)) #how many bugs are added each day
         plant_data["current_nutrients"] -= (random.randint(5, 10)) #how many nutrients are consumed each day
-        plant_data["current_weeds"] += (random.randint(3, 15)) #how many weeds grow each day
+        plant_data["current_weeds"] += (random.randint(5, 20)) #how many weeds grow each day
         plant_data["last_daily"] += datetime.timedelta(days = 1)
         plant_data["current_weather"] = current_weather
         plant_data['current_toxicity'] -= (random.randint(0, 2))
 
-        if plant_data['current_water'] > 100 : #water can't be above 1
+        if plant_data['current_toxicity'] < 0:
+            plant_data['current_toxicity'] = 0
+
+        if plant_data['current_water'] > 100 : #water can't be above 100%
             plant_data['current_water'] = 100
 
-        if plant_data['current_water'] < 0 : #water can't be below 1
+        if plant_data['current_water'] < 0 : #water can't be below 0
             plant_data['current_water'] = 0
 
         if plant_data["current_photosynthesis"] > 100 :
@@ -243,13 +217,14 @@ def totalizer_calc(plant_data,name):
         plant_calc_data["total_bugs"] += (delta_d**2*(((1-plant_data["current_bugs"]/100)-(1-plant_calc_data["previous_bugs"]/100))/(delta_d))/2)+(1-plant_calc_data["previous_bugs"]/100)*delta_d
         plant_calc_data["total_nutrients"] += (delta_d**2*((plant_data["current_nutrients"]/100-plant_calc_data["previous_nutrients"]/100)/(delta_d))/2)+plant_calc_data["previous_nutrients"]/100*delta_d
         plant_calc_data["total_weeds"] += (delta_d**2*(((1-plant_data["current_weeds"]/100)-(1-plant_calc_data["previous_weeds"]/100))/(delta_d))/2)+(1-plant_calc_data["previous_weeds"]/100)*delta_d
-        collection_nfts[name,'plant_calc_data'] = plant_calc_data
         plant_data['last_calc'] = now
         #Updates previous values for next calculation period.
         plant_calc_data["previous_water"] = plant_data["current_water"]
         plant_calc_data["previous_bugs"] = plant_data["current_bugs"]
         plant_calc_data["previous_nutrients"] = plant_data["current_nutrients"]
         plant_calc_data["previous_weeds"] = plant_data["current_weeds"]
+
+        collection_nfts[name,'plant_calc_data'] = plant_calc_data
 
     return plant_data
 
@@ -347,9 +322,8 @@ def fertilize(plant_generation : int, plant_number : int, num_times : int = 1): 
     plant_data = plant_all['plant_data']
     name = plant_all['name']
 
-    payment(plant_generation, 2*num_times)
     for x in range(0, num_times):
-        plant_data['current_nutrients'] += (random.randint(3, 5))
+        plant_data['current_nutrients'] += (random.randint(4, 6))
 
     if plant_data['current_nutrients'] > 100 :
         plant_data["burn_amount"] += (plant_data['current_nutrients']-100)
