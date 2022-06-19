@@ -93,7 +93,9 @@ def start_growing_season():
     plants['finalize_time'] = now + datetime.timedelta(days = growing_season_length + 3)
     plants['active_generation'] = active_gen
     plants[active_gen, 'total_berries'] = 0
+    plants[active_gen, 'sellable_berries'] = 0
     plants[active_gen, 'total_tau'] = 0
+    plants[active_gen, 'claimable_tau'] = 0
     plants[active_gen,'stale_claim_time'] = now + datetime.timedelta(days = growing_season_length + 30)
 
 
@@ -395,8 +397,12 @@ def finalize_plant(plant_generation : int, plant_number : int): #Finalizes your 
     collection_nfts[name,'berries'] = berries
     collection_nfts[name,'final_score'] = berries
     plants[plant_generation,'total_berries'] += berries
+
+    plants[plant_generation, 'claimable_tau'] = plants[plant_generation, 'total_tau']
+
     collection_nfts[name,'finalized'] == True
 
+@export
 def sell_berries(plant_generation : int, plant_number : int): #redeem berries for TAU. Must be done after plant finalize time is over.
     name = f'Gen_{plant_generation}_{plant_number}'
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
@@ -407,7 +413,7 @@ def sell_berries(plant_generation : int, plant_number : int): #redeem berries fo
     proceeds = sell_price * berries
     currency.transfer(amount=proceeds, to=ctx.caller)
     collection_nfts[name,'berries'] = 0
-    plants[plant_generation, 'total_tau']  -= proceeds
+    plants[plant_generation, 'claimable_tau']  -= proceeds
 
 def payment(plant_generation, amount): #used to process payments
     dev_reward = 0.05
@@ -425,7 +431,7 @@ def stale_claims(plant_generation : int): #used by the operator to claim tau fro
     assert metadata['operator'] == ctx.caller, "Only the operator can claim stale tau."
     stale_claim_time = plants[plant_generation,'stale_claim_time']
     assert now >= stale_claim_time, f"The tau is not stale yet and cannot be claimed. Try again after {stale_claim_time}"
-    stale_tau = plants[plant_generation, 'total_tau']
+    stale_tau = plants[plant_generation, 'claimable_tau']
     assert stale_tau > 0, "There is no stale tau to claim."
     currency.transfer(amount=stale_tau, to=ctx.caller)
 
