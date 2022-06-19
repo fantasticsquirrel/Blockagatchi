@@ -365,7 +365,7 @@ def sprayweeds(plant_generation : int, plant_number : int):
     collection_nfts[name,"nft_metadata"] = plant_data
 
 @export
-def finalize_plant(plant_generation : int, plant_number : int): #Finalizes your plant at the end of growing season to deterimine your berry yield.
+def finalize(plant_generation : int, plant_number : int): #Finalizes your plant at the end of growing season to deterimine your berry yield.
     active_generation = plants['active_generation']
     assert plant_generation == active_generation, f'The plant you are trying to interact with is not part of the current generation. The current generation is {active_generation}.'
     name = f'Gen_{plant_generation}_{plant_number}'
@@ -398,12 +398,13 @@ def finalize_plant(plant_generation : int, plant_number : int): #Finalizes your 
     collection_nfts[name,'final_score'] = berries
     plants[plant_generation,'total_berries'] += berries
 
-    plants[plant_generation, 'claimable_tau'] = plants[plant_generation, 'total_tau']
+    if plants[plant_generation, 'claimable_tau'] == 0:
+        plants[plant_generation, 'claimable_tau'] = plants[plant_generation, 'total_tau']
 
     collection_nfts[name,'finalized'] == True
 
 @export
-def sell_berries(plant_generation : int, plant_number : int): #redeem berries for TAU. Must be done after plant finalize time is over.
+def sellberries(plant_generation : int, plant_number : int): #redeem berries for TAU. Must be done after plant finalize time is over.
     name = f'Gen_{plant_generation}_{plant_number}'
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
     berries = collection_nfts[name,'berries']
@@ -459,7 +460,9 @@ def nickname_interaction(nickname : str, function_name :str):
         'shade' : shade,
         'fertilize' : fertilize,
         'pullweeds' : pullweeds,
-        'sprayweeds' : sprayweeds
+        'sprayweeds' : sprayweeds,
+        'finalize' : finalize,
+        'sellberries' : sellberries
     }
 
     function_names[function_name](nick[0],nick[1])
@@ -468,8 +471,3 @@ def nickname_interaction(nickname : str, function_name :str):
 def emergency_withdraw(amount:float): #temporary function used in testing. will be removed from final contract.
     assert metadata['operator'] == ctx.caller, "Only the operator can claim tau."
     currency.transfer(amount=amount, to=ctx.caller)
-
-        #"drought_resist": (random.randint(0, 25)),
-        #"crop_yield": (random.randint(90, 110)),
-        #"bug_resist": (random.randint(0, 25)),
-        #"photosynthesis_rate": (random.randint(90, 110)),
