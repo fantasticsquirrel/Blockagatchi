@@ -44,7 +44,7 @@ def mint_nft(name: str, description: str, ipfs_image_url: str, nft_metadata: dic
     assert amount > 0, "You cannot transfer negative amounts"
     #assert collection_owner.get() == ctx.caller, "Only the collection owner can mint NFTs"
 
-    collection_nfts[name] = {"description": description, "ipfs_image_url": ipfs_image_url, "nft_metadata": {}, "amount": amount} # Adds NFT to collection with all details
+    collection_nfts[name] = {"description": description, "ipfs_image_url": ipfs_image_url, "nft_metadata": f"See collection_nfts[{name},'nft_metadata']", "amount": amount} # Adds NFT to collection with all details
     collection_nfts[name,"nft_metadata"] = nft_metadata
     collection_balances[ctx.caller, name] = amount # Mints the NFT
 
@@ -134,7 +134,7 @@ def buy_plant():
     p_count = plants['count'] + 1
     name = f"Gen_{plant_generation}_{p_count}"
     payment(plant_generation, metadata['plant price'])
-    mint_nft(name,'placeholder description','placeholder image URL',plant_data,1)
+    mint_nft(name,'This is a blueberry plant. Keep it alive and healthy by tending to it during growing season.','placeholder image URL',plant_data,1)
     collection_nfts[name,'plant_calc_data'] = plant_calc_data
     plants['count'] = p_count
 
@@ -364,7 +364,8 @@ def sprayweeds(plant_generation : int, plant_number : int):
 
 @export
 def finalize_plant(plant_generation : int, plant_number : int): #Finalizes your plant at the end of growing season to deterimine your berry yield.
-    assert plant_generation == plants['active_generation'], f'The plant you are trying to interact with is not part of the current generation. The current generation is {active_generation}.'
+    active_generation = plants['active_generation']
+    assert plant_generation == active_generation, f'The plant you are trying to interact with is not part of the current generation. The current generation is {active_generation}.'
     name = f'Gen_{plant_generation}_{plant_number}'
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
     assert collection_nfts[name,'finalized'] == False, 'This plant has already been finalized.'
