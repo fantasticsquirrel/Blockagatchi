@@ -18,7 +18,6 @@ def seed():
     collection_name.set("Test_plants") # Sets the name
     collection_owner.set(ctx.caller) # Sets the owner
     metadata['operator'] = ctx.caller
-    metadata['royalties'] = 0.05
 
     metadata['growing_season_length'] = 4 #change back to 30
     metadata['plant price'] = 1 #change back to 100
@@ -249,6 +248,7 @@ def water(plant_generation : int, plant_number : int, num_times : int = 1):
         plant_data['current_water'] = 100
 
     collection_nfts[name,"nft_metadata"] = plant_data
+    return plant_data
 
 @export
 def squash(plant_generation : int, plant_number : int):
@@ -265,6 +265,7 @@ def squash(plant_generation : int, plant_number : int):
 
     plant_data["last_squash_weed"] = now
     collection_nfts[name,"nft_metadata"] = plant_data
+    return plant_data
 
 @export
 def spraybugs(plant_generation : int, plant_number : int):
@@ -280,6 +281,7 @@ def spraybugs(plant_generation : int, plant_number : int):
 
     payment(plant_generation, 5)
     collection_nfts[name,"nft_metadata"] = plant_data
+    return plant_data
 
 @export
 def growlights(plant_generation : int, plant_number : int):
@@ -299,6 +301,7 @@ def growlights(plant_generation : int, plant_number : int):
         plant_data["current_photosynthesis"] = 100
 
     collection_nfts[name,"nft_metadata"] = plant_data
+    return plant_data
 
 @export
 def shade(plant_generation : int, plant_number : int):
@@ -317,6 +320,7 @@ def shade(plant_generation : int, plant_number : int):
         plant_data["current_photosynthesis"] = 100
 
     collection_nfts[name,"nft_metadata"] = plant_data
+    return plant_data
 
 @export
 def fertilize(plant_generation : int, plant_number : int, num_times : int = 1): #increases nutrients of the plant
@@ -332,6 +336,7 @@ def fertilize(plant_generation : int, plant_number : int, num_times : int = 1): 
         plant_data['current_nutrients'] = 100
 
     collection_nfts[name,"nft_metadata"] = plant_data
+    return plant_data
 
 @export
 def pullweeds(plant_generation : int, plant_number : int): #reduces current weeds in plant and takes 5 minutes to do. Share's a timer.
@@ -349,6 +354,7 @@ def pullweeds(plant_generation : int, plant_number : int): #reduces current weed
 
     plant_data["last_squash_weed"] = now
     collection_nfts[name,"nft_metadata"] = plant_data
+    return plant_data
 
 @export
 def sprayweeds(plant_generation : int, plant_number : int):
@@ -363,6 +369,7 @@ def sprayweeds(plant_generation : int, plant_number : int):
         plant_data['current_weeds'] = 0
 
     collection_nfts[name,"nft_metadata"] = plant_data
+    return plant_data
 
 @export
 def finalize(plant_generation : int, plant_number : int): #Finalizes your plant at the end of growing season to deterimine your berry yield.
@@ -402,6 +409,7 @@ def finalize(plant_generation : int, plant_number : int): #Finalizes your plant 
         plants[plant_generation, 'claimable_tau'] = plants[plant_generation, 'total_tau']
 
     collection_nfts[name,'finalized'] == True
+    return berries
 
 @export
 def sellberries(plant_generation : int, plant_number : int): #redeem berries for TAU. Must be done after plant finalize time is over.
@@ -415,6 +423,7 @@ def sellberries(plant_generation : int, plant_number : int): #redeem berries for
     currency.transfer(amount=proceeds, to=ctx.caller)
     collection_nfts[name,'berries'] = 0
     plants[plant_generation, 'claimable_tau']  -= proceeds
+    return proceeds
 
 def payment(plant_generation, amount): #used to process payments
     dev_reward = 0.05
