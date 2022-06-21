@@ -19,8 +19,8 @@ def seed():
     collection_owner.set(ctx.caller) # Sets the owner
     metadata['operator'] = ctx.caller
 
-    metadata['growing_season_length'] = 4 #change back to 30
-    metadata['plant price'] = 1 #change back to 100
+    metadata['growing_season_length'] = 30
+    metadata['plant price'] = 750
     metadata['event_handler'] = 'con_bbf_events_01'
 
     plants['growing_season'] = False
@@ -99,9 +99,14 @@ def start_growing_season():
 
 
 @export
-def buy_plant():
+def buy_plant(nick : str):
     assert plants['growing_season'] == True, 'The growing season has not started, so you cannot buy a plant.'
-    #assert plants['growing_season_end_time'] >= now + datetime.timedelta(days = 25), "It's too far into the growing season and you cannot buy a plant now."
+    assert plants['growing_season_end_time'] >= now + datetime.timedelta(days = 25), "It's too far into the growing season and you cannot buy a plant now."
+    assert not nick.isdigit(), "The plant nickname can't be an integer."
+    assert bool(collection_nfts[nick]) == False, "This nickname already exists."
+    assert nick.isalnum() == True, "Only alphanumeric characters allowed."
+    assert nick != "", "Name cannot be empty"
+    assert len(nick) >= 3, "The minimum length is 3 characters."
     plant_generation = plants['active_generation']
 
     plant_data = {
@@ -134,6 +139,7 @@ def buy_plant():
 
     p_count = plants['count'] + 1
     name = f"Gen_{plant_generation}_{p_count}"
+    collection_nfts[nick] = [plant_generation , p_count]
     payment(plant_generation, metadata['plant price'])
     mint_nft(name,'This is a blueberry plant. Keep it alive and healthy by tending to it during growing season.','placeholder image URL',plant_data,1)
     collection_nfts[name,'plant_calc_data'] = plant_calc_data
@@ -446,7 +452,7 @@ def stale_claims(plant_generation : int): #used by the operator to claim tau fro
     currency.transfer(amount=stale_tau, to=ctx.caller)
 
 @export
-def nickname(plant_generation : int, plant_number : int, nick : str):
+def update_nickname(plant_generation : int, plant_number : int, nick : str):
     name = f'Gen_{plant_generation}_{plant_number}'
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
     assert not nick.isdigit(), "The plant nickname can't be an integer."
@@ -454,7 +460,7 @@ def nickname(plant_generation : int, plant_number : int, nick : str):
     assert nick.isalnum() == True, "Only alphanumeric characters allowed."
     assert nick != "", "Name cannot be empty"
     assert len(nick) >= 3, "The minimum length is 3 characters."
-    payment(plant_generation, 2)
+    payment(plant_generation, 25)
     collection_nfts[nick] = [plant_generation , plant_number]
 
 @export
@@ -475,6 +481,7 @@ def nickname_interaction(nickname : str, function_name :str):
     }
 
     function_names[function_name](nick[0],nick[1])
+
 
 @export
 def emergency_withdraw(amount:float): #temporary function used in testing. will be removed from final contract.
