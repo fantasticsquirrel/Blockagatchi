@@ -22,6 +22,7 @@ def seed():
     metadata['growing_season_length'] = 30
     metadata['plant price'] = 750
     metadata['event_handler'] = 'con_bbf_events_01'
+    metadata['ipfs_contract'] = 'con_bbf_ipfs_0'
 
     plants['growing_season'] = False
     plants['growing_season_start_time'] = now
@@ -41,7 +42,6 @@ def mint_nft(name: str, description: str, ipfs_image_url: str, nft_metadata: dic
     assert name != "", "Name cannot be empty"
     assert collection_nfts[name] == 0, "Name already exists"
     assert amount > 0, "You cannot transfer negative amounts"
-    #assert collection_owner.get() == ctx.caller, "Only the collection owner can mint NFTs"
 
     collection_nfts[name] = {"description": description, "ipfs_image_url": ipfs_image_url, "nft_metadata": f"See collection_nfts[{name},'nft_metadata']", "amount": amount} # Adds NFT to collection with all details
     collection_nfts[name,"nft_metadata"] = nft_metadata
@@ -141,9 +141,13 @@ def buy_plant(nick : str):
     name = f"Gen_{plant_generation}_{p_count}"
     collection_nfts[nick] = [plant_generation , p_count]
     payment(plant_generation, metadata['plant price'])
-    mint_nft(name,'This is a blueberry plant. Keep it alive and healthy by tending to it during growing season.','placeholder image URL',plant_data,1)
+
+    ipfs_c = importlib.import_module(metadata['ipfs_contract'])
+    ipfs_image_url = ipfs_c.pick_random()
+    mint_nft(name,'This is a blueberry plant. Keep it alive and healthy by tending to it during growing season.' , ipfs_image_url , plant_data,1)
     collection_nfts[name,'plant_calc_data'] = plant_calc_data
     plants['count'] = p_count
+    return [plant_data,ipfs_image_url]
 
 def action_setup(plant_generation : int, plant_number : int):
     active_generation = plants['active_generation']
@@ -480,7 +484,7 @@ def nickname_interaction(nickname : str, function_name :str):
         'sellberries' : sellberries
     }
 
-    function_names[function_name](nick[0],nick[1])
+    return function_names[function_name](nick[0],nick[1])
 
 
 @export
