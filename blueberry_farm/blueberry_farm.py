@@ -394,6 +394,9 @@ def finalize(plant_generation : int, plant_number : int): #Finalizes your plant 
     plant_data = collection_nfts[name,"nft_metadata"]
     assert plant_data["alive"] == True, 'Your plant is dead due to neglect and you must buy a new plant to try again. Try not to kill it too.'
 
+    if plants['growing_season'] == True :
+        plants['growing_season'] = False
+
     delta = end_time - plant_data['last_calc']
     delta_d = (delta.seconds / 86400)
 
