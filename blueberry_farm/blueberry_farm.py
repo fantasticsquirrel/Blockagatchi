@@ -389,13 +389,15 @@ def finalize(plant_generation : int, plant_number : int): #Finalizes your plant 
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
     assert collection_nfts[name,'finalized'] == False, 'This plant has already been finalized.'
     end_time = plants['growing_season_end_time']
-    assert now <= plants['finalize_time'] and now >= end_time, 'It is not time to finalize your plant.'
+    finalize_time = plants['finalize_time']
+    assert now <= finalize_time and now >= end_time, f'It is not time to finalize your plant. Try between {end_time} and {finalize_time}'
     if ctx.caller.startswith('con_'): return
     plant_data = collection_nfts[name,"nft_metadata"]
     assert plant_data["alive"] == True, 'Your plant is dead due to neglect and you must buy a new plant to try again. Try not to kill it too.'
 
     if plants['growing_season'] == True :
         plants['growing_season'] = False
+        plants['count'] = 0
 
     delta = end_time - plant_data['last_calc']
     delta_d = (delta.seconds / 86400)
@@ -450,13 +452,21 @@ def manual_reward_add(plant_generation : int, amount : int): #used to manually a
     plants[plant_generation, 'total_tau'] += amount
 
 @export
-def stale_claims(plant_generation : int): #used by the operator to claim tau from a plant generation that ended at least 30 days prior. This allows players aple time to sell their berries
+def stale_claims(plant_generation : int): #used by the operator to claim tau from a plant generation that ended at least 30 days prior. This allows players ample time to sell their berries
     assert metadata['operator'] == ctx.caller, "Only the operator can claim stale tau."
     stale_claim_time = plants[plant_generation,'stale_claim_time']
     assert now >= stale_claim_time, f"The tau is not stale yet and cannot be claimed. Try again after {stale_claim_time}"
     stale_tau = plants[plant_generation, 'claimable_tau']
     assert stale_tau > 0, "There is no stale tau to claim."
     currency.transfer(amount=stale_tau, to=ctx.caller)
+
+@export
+def manual_season_end():
+    assert metadata['operator'] == ctx.caller, "Only the operator can do this."
+    assert now > plants['growing_season_end_time'], "You can't end the season before the end_time."
+    plants['growing_season'] = False
+    plants['count'] = 0
+
 
 @export
 def update_nickname(plant_generation : int, plant_number : int, nick : str):
@@ -490,7 +500,7 @@ def nickname_interaction(nickname : str, function_name :str):
     return function_names[function_name](nick[0],nick[1])
 
 
-@export
-def emergency_withdraw(amount:float): #temporary function used in testing. will be removed from final contract.
-    assert metadata['operator'] == ctx.caller, "Only the operator can claim tau."
-    currency.transfer(amount=amount, to=ctx.caller)
+#@export
+#def emergency_withdraw(amount:float): #temporary function used in testing. will be removed from final contract.
+#    assert metadata['operator'] == ctx.caller, "Only the operator can claim tau."
+#    currency.transfer(amount=amount, to=ctx.caller)
