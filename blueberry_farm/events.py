@@ -6,7 +6,7 @@ def seed():
     last_event.set(0)
 
 @export
-def event(plant_data: dict):
+def event(plant_data: Any):
 
     event_names = {
         1 : freak_rain, #extra water
@@ -44,19 +44,24 @@ def birds(plant_data):
     return plant_data
 
 def toxic_rain(plant_data):
-    plant_data["current_toxicity"] += (random.randint(3, 15))
+    plant_data["current_toxicity"] += (random.randint(3, 7))
     return plant_data
 
 def lawn_gnomes(plant_data):
-    plant_data["current_toxicity"] -= (random.randint(3, 15))
+    plant_data["current_toxicity"] -= (random.randint(3, 7))
     return plant_data
 
 def solar_eclipse(plant_data):
     plant_data["current_photosynthesis"] -= (random.randint(3, 10))
+    if plant_data["current_photosynthesis"] < 0 :
+        plant_data["current_photosynthesis"] = 0
     return plant_data
 
 def solar_flare(plant_data):
     plant_data["current_photosynthesis"] += (random.randint(3, 10))
+    if plant_data["current_photosynthesis"] > 100 :
+        plant_data["burn_amount"] += (plant_data["current_photosynthesis"]-100)
+        plant_data["current_photosynthesis"] = 100
     return plant_data
 
 def extra_manure(plant_data):
