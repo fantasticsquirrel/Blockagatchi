@@ -91,7 +91,7 @@ def start_growing_season():
     plants['growing_season'] = True
     plants['growing_season_start_time'] = now
     plants['growing_season_end_time'] =  now + datetime.timedelta(days = growing_season_length)
-    plants['finalize_time'] = now + datetime.timedelta(days = growing_season_length + 3)
+    plants[active_gen, 'finalize_time'] = now + datetime.timedelta(days = growing_season_length + 3)
     plants['active_generation'] = active_gen
     plants[active_gen, 'total_berries'] = 0
     plants[active_gen, 'sellable_berries'] = 0
@@ -392,7 +392,7 @@ def finalize(plant_generation : int, plant_number : int): #Finalizes your plant 
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
     assert collection_nfts[name,'finalized'] == False, 'This plant has already been finalized.'
     end_time = plants['growing_season_end_time']
-    finalize_time = plants['finalize_time']
+    finalize_time = plants[plant_generation, 'finalize_time']
     assert now <= finalize_time and now >= end_time, f'It is not time to finalize your plant. Try between {end_time} and {finalize_time}'
     if ctx.caller.startswith('con_'): return
     plant_data = collection_nfts[name,"nft_metadata"]
@@ -434,7 +434,7 @@ def sellberries(plant_generation : int, plant_number : int): #redeem berries for
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
     berries = collection_nfts[name,'berries']
     assert berries > 0, "You don't have any berries to sell."
-    assert now >= plants['finalize_time'], f"You can't sell yet. Try again after {plants['finalize_time']} but do not wait too long."
+    assert now >= plants[plant_generation, 'finalize_time'], f"You can't sell yet. Try again after {plants[plant_generation, 'finalize_time']} but do not wait too long."
     sell_price = plants[plant_generation, 'total_tau'] / plants[plant_generation,'total_berries']
     proceeds = sell_price * berries
     currency.transfer(amount=proceeds, to=ctx.caller)
