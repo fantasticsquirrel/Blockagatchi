@@ -151,7 +151,7 @@ def buy_plant(nick : str):
     mint_nft(name,'This is a blueberry plant. Keep it alive and healthy by tending to it during growing season.' , ipfs_image_url , plant_data,1)
     collection_nfts[name,'plant_calc_data'] = plant_calc_data
     plants['count'] = p_count
-    return [plant_data,ipfs_image_url]
+    return [plant_data["current_water"],plant_data["current_photosynthesis"],plant_data["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"],ipfs_image_url]
 
 def action_setup(plant_generation : int, plant_number : int):
     active_generation = plants['active_generation']
@@ -262,7 +262,7 @@ def water(plant_generation : int, plant_number : int, num_times : int = 1): #Wat
         plant_data['current_water'] = 100
 
     collection_nfts[name,"nft_metadata"] = plant_data
-    return [plant_data["current_water"],plant_data["current_photosynthesis"],["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"]]
+    return [plant_data["current_water"],plant_data["current_photosynthesis"],plant_data["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"]]
 
 @export
 def squash(plant_generation : int, plant_number : int): #Squash bugs to reduce current_bugs and takes 5 minutes.  Share's a timer with pullweeds.
@@ -279,7 +279,7 @@ def squash(plant_generation : int, plant_number : int): #Squash bugs to reduce c
 
     plant_data["last_squash_weed"] = now
     collection_nfts[name,"nft_metadata"] = plant_data
-    return [plant_data["current_water"],plant_data["current_photosynthesis"],["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"]]
+    return [plant_data["current_water"],plant_data["current_photosynthesis"],plant_data["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"]]
 
 @export
 def spraybugs(plant_generation : int, plant_number : int): #Spray bugs to instantly reduce current_bugs but costs tau and adds small amount of toxicity
@@ -295,7 +295,7 @@ def spraybugs(plant_generation : int, plant_number : int): #Spray bugs to instan
 
     payment(plant_generation, 5)
     collection_nfts[name,"nft_metadata"] = plant_data
-    return [plant_data["current_water"],plant_data["current_photosynthesis"],["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"]]
+    return [plant_data["current_water"],plant_data["current_photosynthesis"],plant_data["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"]]
 
 @export
 def growlights(plant_generation : int, plant_number : int): #add photosynthesis to help plant catchup after several rainy days. Adds amount to current_photosynthesis but if it goes over 100%, burns your plant.
@@ -315,7 +315,7 @@ def growlights(plant_generation : int, plant_number : int): #add photosynthesis 
         plant_data["current_photosynthesis"] = 100
 
     collection_nfts[name,"nft_metadata"] = plant_data
-    return [plant_data["current_water"],plant_data["current_photosynthesis"],["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"]]
+    return [plant_data["current_water"],plant_data["current_photosynthesis"],plant_data["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"]]
 
 @export
 def shade(plant_generation : int, plant_number : int): #shades your plant to reduce photosynthesis by a small amount
@@ -333,7 +333,7 @@ def shade(plant_generation : int, plant_number : int): #shades your plant to red
         plant_data["current_photosynthesis"] = 0
 
     collection_nfts[name,"nft_metadata"] = plant_data
-    return [plant_data["current_water"],plant_data["current_photosynthesis"],["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"]]
+    return [plant_data["current_water"],plant_data["current_photosynthesis"],plant_data["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"]]
 
 @export
 def fertilize(plant_generation : int, plant_number : int, num_times : int = 1): #increases current nutrients of the plant but if nutrients go over 100%, it burns your plant.
@@ -349,7 +349,7 @@ def fertilize(plant_generation : int, plant_number : int, num_times : int = 1): 
         plant_data['current_nutrients'] = 100
 
     collection_nfts[name,"nft_metadata"] = plant_data
-    return [plant_data["current_water"],plant_data["current_photosynthesis"],["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"]]
+    return [plant_data["current_water"],plant_data["current_photosynthesis"],plant_data["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"]]
 
 @export
 def pullweeds(plant_generation : int, plant_number : int): #reduces current weeds in plant and takes 5 minutes to do. Share's a timer with squash bugs.
@@ -367,7 +367,7 @@ def pullweeds(plant_generation : int, plant_number : int): #reduces current weed
 
     plant_data["last_squash_weed"] = now
     collection_nfts[name,"nft_metadata"] = plant_data
-    return [plant_data["current_water"],plant_data["current_photosynthesis"],["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"]]
+    return [plant_data["current_water"],plant_data["current_photosynthesis"],plant_data["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"]]
 
 @export
 def sprayweeds(plant_generation : int, plant_number : int): #Spray weeds to instantly reduce current_weeds but costs tau and adds small amount of toxicity
@@ -382,7 +382,7 @@ def sprayweeds(plant_generation : int, plant_number : int): #Spray weeds to inst
         plant_data['current_weeds'] = 0
 
     collection_nfts[name,"nft_metadata"] = plant_data
-    return [plant_data["current_water"],plant_data["current_photosynthesis"],["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"]]
+    return [plant_data["current_water"],plant_data["current_photosynthesis"],plant_data["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"]]
 
 @export
 def finalize(plant_generation : int, plant_number : int): #Finalizes your plant at the end of growing season to deterimine your berry yield.
