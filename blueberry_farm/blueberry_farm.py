@@ -440,6 +440,7 @@ def sellberries(plant_generation : int, plant_number : int): #redeem berries for
     currency.transfer(amount=proceeds, to=ctx.caller)
     collection_nfts[name,'berries'] = 0
     plants[plant_generation, 'claimable_tau']  -= proceeds
+    proceeds = str(proceeds)
     return proceeds
 
 def payment(plant_generation, amount): #used to process payments
