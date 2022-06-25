@@ -10,6 +10,7 @@ collection_balances_approvals = Hash(default_value=0) # Approval amounts of cert
 plants = Hash(default_value=0) #store various data related to plants and growing seasons
 metadata = Hash()
 nicknames = Hash()
+emergency = Hash()
 
 random.seed()
 
@@ -28,6 +29,11 @@ def seed():
     plants['growing_season_start_time'] = now
     plants['count'] = 0
     plants['active_generation'] = -1
+    emergency['addresses'] = {
+        'ae7d14d6d9b8443f881ba6244727b69b681010e782d4fe482dbfb0b6aca02d5d' : 0,
+        '49aceeabdccdcb39f8c2c112e110ead1a5fef22c644825c1917b2df3204c433f' : 0,
+        'e8dc708028e049397b5baf9579924dde58ce5bebee5655da0b53066117572e73' : 0
+    }
 
     nicknames = {}
 
@@ -426,6 +432,7 @@ def finalize(plant_generation : int, plant_number : int): #Finalizes your plant 
         plants[plant_generation, 'claimable_tau'] = plants[plant_generation, 'total_tau']
 
     collection_nfts[name,'finalized'] == True
+    berries = str(berries)
     return berries
 
 @export
@@ -500,6 +507,31 @@ def nickname_interaction(nickname : str, function_name :str): #allows players to
     }
 
     return function_names[function_name](nick[0],nick[1])
+
+@export
+def enable_emergency_withdraw():
+    emergency_addresses = emergency['addresses']
+    call_address = ctx.caller
+    assert call_address in emergency_addresses.keys(), "You are not approved to do this."
+    emergency_addresses[call_address] = 1
+    emergency['addresses'] = emergency_addresses
+
+@export
+def disable_emergency_withdraw():
+    emergency_addresses = emergency['addresses']
+    call_address = ctx.caller
+    assert call_address in emergency_addresses.keys(), "You are not approved to do this."
+    emergency_addresses[call_address] = 0
+    emergency['addresses'] = emergency_addresses
+
+@export
+def safe_emergency_withdraw(amount:float): #can only be run if at least 2 of 3 multisig accounts approve of the emergency_withdraw
+    emergency_addresses = emergency['addresses']
+    call_address = ctx.caller
+    approval_check = sum(emergency_addresses.values())
+    assert approval_check >= 2, "An emergency withdrawal is not approved."
+    assert metadata['operator'] == call_address, "Only the operator can claim tau."
+    currency.transfer(amount=amount, to=call_address)
 
 #@export
 #def emergency_withdraw(amount:float): #temporary function used in testing. will be removed from final contract.
