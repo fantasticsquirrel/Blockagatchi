@@ -20,7 +20,7 @@ def seed():
     collection_owner.set(ctx.caller) # Sets the owner
     metadata['operator'] = ctx.caller
 
-    metadata['growing_season_length'] = 30
+    metadata['growing_season_length'] = 14
     metadata['plant price'] = 500
     #metadata['event_handler'] = 'con_bbf_events_01'
     metadata['ipfs_contract'] = 'con_harvest_gen0_ipfs'
@@ -109,7 +109,7 @@ def start_growing_season():
 @export
 def buy_plant(nick : str):
     assert plants['growing_season'] == True, 'The growing season has not started, so you cannot buy a plant.'
-    assert plants['growing_season_end_time'] >= now + datetime.timedelta(days = 25), "It's too far into the growing season and you cannot buy a plant now."
+    assert plants['growing_season_end_time'] >= now + datetime.timedelta(days = 12), "It's too far into the growing season and you cannot buy a plant now."
     assert not nick.isdigit(), "The plant nickname can't be an integer."
     assert bool(collection_nfts[nick]) == False, "This nickname already exists."
     assert nick.isalnum() == True, "Only alphanumeric characters allowed."
@@ -194,22 +194,22 @@ def action_setup(plant_generation : int, plant_number : int):
     return plant_all
 
 def daily_conditions(plant_data):
-    while now - plant_data["last_daily"] > datetime.timedelta(days = 1): #Loops through to calculate changes to plant if it's been more than a day since the last day's changes. Does multiple days worth too if needed
+    while now - plant_data["last_daily"] > datetime.timedelta(hours = 12): #Loops through to calculate changes to plant if it's been more than a day since the last day's changes. Does multiple days worth too if needed
         current_weather = random.randint(1, 3) # 1=sunny 2=cloudy 3=rainy
         if current_weather == 1:
-            plant_data["current_water"] -= (random.randint(10, 20)) #how much water is lost each sunny day
-            plant_data["current_photosynthesis"] += (random.randint(4, 6)) #How much photosynthesis increases each sunny day
+            plant_data["current_water"] -= (random.randint(5, 10)) #how much water is lost each sunny day
+            plant_data["current_photosynthesis"] += (random.randint(4, 7)) #How much photosynthesis increases each sunny day
         if current_weather == 2:
-            plant_data["current_water"] -= (random.randint(5, 15)) #how much water is lost each cloudy day
+            plant_data["current_water"] -= (random.randint(3, 8)) #how much water is lost each cloudy day
             plant_data["current_photosynthesis"] += (random.randint(2, 4)) #How much photosynthesis increases each cloudy day
         if current_weather == 3:
-            plant_data["current_water"] += (random.randint(5, 25)) #how much water is gained each rainy day
+            plant_data["current_water"] += (random.randint(3, 12)) #how much water is gained each rainy day
             plant_data["current_photosynthesis"] += (random.randint(1, 2)) #How much photosynthesis increases each rainy day
 
-        plant_data["current_bugs"] += (random.randint(5, 20)) #how many bugs are added each day
-        plant_data["current_nutrients"] -= (random.randint(5, 10)) #how many nutrients are consumed each day
-        plant_data["current_weeds"] += (random.randint(5, 20)) #how many weeds grow each day
-        plant_data["last_daily"] += datetime.timedelta(days = 1)
+        plant_data["current_bugs"] += (random.randint(3, 10)) #how many bugs are added each day
+        plant_data["current_nutrients"] -= (random.randint(2, 5)) #how many nutrients are consumed each day
+        plant_data["current_weeds"] += (random.randint(2, 10)) #how many weeds grow each day
+        plant_data["last_daily"] += datetime.timedelta(hours = 12)
         plant_data["current_weather"] = current_weather
         plant_data['current_toxicity'] -= (random.randint(0, 2))
 
@@ -309,7 +309,7 @@ def growlights(plant_generation : int, plant_number : int): #add photosynthesis 
     plant_data = plant_all['plant_data']
     name = plant_all['name']
 
-    t_delta = plant_data["last_grow_light"] + datetime.timedelta(days = 1)
+    t_delta = plant_data["last_grow_light"] + datetime.timedelta(hours = 12)
     assert now > t_delta, f"You have used a grow light or shade too recently. Try again at {t_delta}."
 
     payment(plant_generation, 5)
@@ -329,7 +329,7 @@ def shade(plant_generation : int, plant_number : int): #shades your plant to red
     plant_data = plant_all['plant_data']
     name = plant_all['name']
 
-    t_delta = plant_data["last_grow_light"] + datetime.timedelta(days = 1)
+    t_delta = plant_data["last_grow_light"] + datetime.timedelta(hours = 12)
     assert now > t_delta, f"You have used a grow light or shade too recently. Try again at {t_delta}."
 
     plant_data['current_photosynthesis'] -= (random.randint(3, 5))
@@ -386,6 +386,8 @@ def sprayweeds(plant_generation : int, plant_number : int): #Spray weeds to inst
     plant_data['current_weeds'] -= (random.randint(10, 20))
     if plant_data['current_weeds'] < 0 :
         plant_data['current_weeds'] = 0
+
+    payment(plant_generation, 5)
 
     collection_nfts[name,"nft_metadata"] = plant_data
     return [plant_data["current_water"],plant_data["current_photosynthesis"],plant_data["current_bugs"],plant_data["current_nutrients"],plant_data["current_weeds"],plant_data['current_toxicity'],plant_data["burn_amount"],plant_data["current_weather"]]
