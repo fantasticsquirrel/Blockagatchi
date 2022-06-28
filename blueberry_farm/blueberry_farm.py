@@ -176,7 +176,7 @@ def action_setup(plant_generation : int, plant_number : int):
         plant_data["current_nutrients"] -= (random.randint(5, 15))
         plant_data["current_weeds"] += (random.randint(5, 15))
 
-    plant_data = daily_conditions(plant_data) #checks if weather and other daily conditions need updating
+    plant_data = daily_conditions(plant_data, plant_generation) #checks if weather and other daily conditions need updating
     plant_data = totalizer_calc(plant_data,name) #checks if enough time has passed to add info to the plant totalizer calculations
 
     #if (random.randint(1, 10)) == 10 : #10% chance of an event happening #RANDOM EVENTS NOT WORKING. COMMENTING OUT UNTIL FIXED
@@ -193,8 +193,8 @@ def action_setup(plant_generation : int, plant_number : int):
 
     return plant_all
 
-def daily_conditions(plant_data):
-    while now - plant_data["last_daily"] > datetime.timedelta(hours = 12): #Loops through to calculate changes to plant if it's been more than a day since the last day's changes. Does multiple days worth too if needed
+def daily_conditions(plant_data, plant_generation):
+    while now - plant_data["last_daily"] > datetime.timedelta(hours = 12) and now < (plants[plant_generation, 'finalize_time'] + datetime.timedelta(days = -3)): #Loops through to calculate changes to plant if it's been more than a day since the last day's changes. Does multiple days worth too if needed
         current_weather = random.randint(1, 3) # 1=sunny 2=cloudy 3=rainy
         if current_weather == 1:
             plant_data["current_water"] -= (random.randint(5, 10)) #how much water is lost each sunny day
@@ -218,9 +218,6 @@ def daily_conditions(plant_data):
 
         if plant_data['current_water'] > 100 : #water can't be above 100%
             plant_data['current_water'] = 100
-
-        if plant_data['current_water'] < 0 : #water can't be below 0
-            plant_data['current_water'] = 0
 
         if plant_data["current_photosynthesis"] > 100 :
             plant_data["burn_amount"] += (plant_data["current_photosynthesis"]-100)
@@ -335,7 +332,7 @@ def shade(plant_generation : int, plant_number : int): #shades your plant to red
     plant_data['current_photosynthesis'] -= (random.randint(3, 5))
     plant_data["last_grow_light"] = now
 
-    if plant_data["current_photosynthesis"] < 100 :
+    if plant_data["current_photosynthesis"] < 0 :
         plant_data["current_photosynthesis"] = 0
 
     collection_nfts[name,"nft_metadata"] = plant_data
@@ -404,7 +401,12 @@ def finalize(plant_generation : int, plant_number : int): #Finalizes your plant 
     assert now <= finalize_time and now >= end_time, f'It is not time to finalize your plant. Try between {end_time} and {finalize_time}'
     if ctx.caller.startswith('con_'): return
     plant_data = collection_nfts[name,"nft_metadata"]
-    assert plant_data["alive"] == True, 'Your plant is dead due to neglect and you must buy a new plant to try again. Try not to kill it too.'
+    plant_data = daily_conditions(plant_data, plant_generation) #checks if weather and other daily conditions need updating
+    plant_data = dead_check(plant_data)
+    if plant_data["alive"] == False:
+        plant_data['last_calc'] = now
+        collection_nfts[name,"nft_metadata"] = plant_data
+        return 'Your plant is dead due to neglect and you cannot grow any berries. Try again next season.'
 
     if plants['growing_season'] == True : #first person to run this also turns growing_season to false and resets plant counter for next growing season
         plants['growing_season'] = False
@@ -511,19 +513,11 @@ def nickname_interaction(nickname : str, function_name :str): #allows players to
     return function_names[function_name](nick[0],nick[1])
 
 @export
-def enable_emergency_withdraw():
+def e_wdraw_enable(enable:bool):
     emergency_addresses = emergency['addresses']
     call_address = ctx.caller
     assert call_address in emergency_addresses.keys(), "You are not approved to do this."
-    emergency_addresses[call_address] = 1
-    emergency['addresses'] = emergency_addresses
-
-@export
-def disable_emergency_withdraw():
-    emergency_addresses = emergency['addresses']
-    call_address = ctx.caller
-    assert call_address in emergency_addresses.keys(), "You are not approved to do this."
-    emergency_addresses[call_address] = 0
+    emergency_addresses[call_address] = int(enable)
     emergency['addresses'] = emergency_addresses
 
 @export
