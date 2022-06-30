@@ -16,7 +16,7 @@ random.seed()
 
 @construct
 def seed():
-    collection_name.set("Test_plants") # Sets the name
+    collection_name.set("Harvest Blueberry Plants") # Sets the name
     collection_owner.set(ctx.caller) # Sets the owner
     metadata['operator'] = ctx.caller
 
