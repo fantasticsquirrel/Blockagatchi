@@ -13,19 +13,11 @@ def seed():
     metadata['operator'] = ctx.caller
 
 @export
-def enable_emergency_withdraw():
+def e_wdraw_enable(enable:bool):
     emergency_addresses = emergency['addresses']
     call_address = ctx.caller
     assert call_address in emergency_addresses.keys(), "You are not approved to do this."
-    emergency_addresses[call_address] = 1
-    emergency['addresses'] = emergency_addresses
-
-@export
-def disable_emergency_withdraw():
-    emergency_addresses = emergency['addresses']
-    call_address = ctx.caller
-    assert call_address in emergency_addresses.keys(), "You are not approved to do this."
-    emergency_addresses[call_address] = 0
+    emergency_addresses[call_address] = int(enable)
     emergency['addresses'] = emergency_addresses
 
 @export
@@ -36,8 +28,3 @@ def safe_emergency_withdraw(amount:float): #can only be run if at least 2 of 3 m
     assert approval_check >= 2, "An emergency withdrawal is not approved."
     assert metadata['operator'] == call_address, "Only the operator can claim tau."
     currency.transfer(amount=amount, to=call_address)
-
-@export
-def emergency_withdraw(amount:float): #temporary function used in testing. will be removed from final contract.
-    assert metadata['operator'] == ctx.caller, "Only the operator can claim tau."
-    currency.transfer(amount=amount, to=ctx.caller)
