@@ -133,7 +133,7 @@ def buy_plant(nick : str, referrer : str = False):
         "last_squash_weed" : (now + datetime.timedelta(days = -1)),
         "last_grow_light" : (now + datetime.timedelta(days = -1)),
         "burn_amount" : 0,
-        "plant_end_time" : (now + growing_season_length)
+        "plant_end_time" : (now + datetime.timedelta(days = growing_season_length))
     }
 
     plant_calc_data =  {
@@ -159,7 +159,7 @@ def buy_plant(nick : str, referrer : str = False):
     mint_nft(name,'This is a blueberry plant. Keep it alive and healthy by tending to it during growing season.' , ipfs_image_url , plant_data,1)
     collection_nfts[name,'plant_calc_data'] = plant_calc_data
 
-    if referrer == True:
+    if bool(referrer) == True:
         collection_nfts[nick,'bonus_berries']  = 3
         collection_nfts[referrer,'bonus_berries']  += 3
     else:
@@ -408,10 +408,10 @@ def finalize(plant_generation : int, plant_number : int): #Finalizes your plant 
     name = f'Gen_{plant_generation}_{plant_number}'
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
     assert collection_nfts[name,'finalized'] == False, 'This plant has already been finalized.'
+    plant_data = collection_nfts[name,"nft_metadata"]
     end_time = plant_data['plant_end_time']
     finalize_time = plants[plant_generation, 'finalize_time']
     assert now <= finalize_time and now >= end_time, f'It is not time to finalize your plant. Try between {end_time} and {finalize_time}'
-    plant_data = collection_nfts[name,"nft_metadata"]
     plant_data = daily_conditions(plant_data, plant_generation) #checks if weather and other daily conditions need updating
     plant_data = dead_check(plant_data)
     if plant_data["alive"] == False:
