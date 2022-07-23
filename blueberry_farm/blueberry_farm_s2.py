@@ -425,6 +425,7 @@ def finalize(plant_generation : int, plant_number : int): #Finalizes your plant 
 
     plant_data = totalizer_calc(plant_data,name)
     collection_nfts[name,"nft_metadata"] = plant_data
+    plant_calc_data = collection_nfts[name,'plant_calc_data']
 
     length = metadata['growing_season_length']
     berries = int(collection_nfts[name,'bonus_berries'] + (1000 * ((plant_calc_data["total_water"]*plant_calc_data["total_bugs"]*plant_calc_data["total_nutrients"]*plant_calc_data["total_weeds"])/(length**4))*(1-plant_data['current_toxicity']/100)*(plant_data["current_photosynthesis"]/100)*(1-plant_data["burn_amount"]/100)))
