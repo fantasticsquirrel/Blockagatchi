@@ -210,16 +210,16 @@ def daily_conditions(plant_data, plant_generation):
             plant_data["current_water"] -= (random.randint(5, 9)) #how much water is lost each cloudy day
             plant_data["current_photosynthesis"] += (random.randint(2, 4)) #How much photosynthesis increases each cloudy day
         if current_weather == 3:
-            plant_data["current_water"] += (random.randint(3, 12)) #how much water is gained each rainy day
+            plant_data["current_water"] += (random.randint(3, 10)) #how much water is gained each rainy day
             plant_data["current_photosynthesis"] += (random.randint(1, 2)) #How much photosynthesis increases each rainy day
 
         plant_data["current_bugs"] += (random.randint(3, 10)) #how many bugs are added each day
-        plant_data["current_nutrients"] -= (random.randint(2, 5)) #how many nutrients are consumed each day
+        plant_data["current_nutrients"] -= (random.randint(3, 6)) #how many nutrients are consumed each day
         plant_data["current_weeds"] += (random.randint(2, 10)) #how many weeds grow each day
         plant_data["last_daily"] += datetime.timedelta(hours = 12)
         plant_data["current_weather"] = current_weather
         plant_data['current_toxicity'] -= (random.randint(0, 2))
-        plant_data['burn_amount'] -= (random.randint(0, 2))
+        plant_data['burn_amount'] -= (random.randint(0, 1))
 
         if plant_data['current_toxicity'] < 0:
             plant_data['current_toxicity'] = 0
@@ -403,8 +403,6 @@ def sprayweeds(plant_generation : int, plant_number : int): #Spray weeds to inst
 
 @export
 def finalize(plant_generation : int, plant_number : int): #Finalizes your plant at the end of growing season to deterimine your berry yield.
-    active_generation = plants['active_generation']
-    assert plant_generation == active_generation, f'The plant you are trying to interact with is not part of the current generation. The current generation is {active_generation}.'
     name = f'Gen_{plant_generation}_{plant_number}'
     assert collection_balances[ctx.caller, name] == 1, "You do not own this plant."
     assert collection_nfts[name,'finalized'] == False, 'This plant has already been finalized.'
