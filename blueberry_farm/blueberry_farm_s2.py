@@ -160,6 +160,8 @@ def buy_plant(nick : str, referrer : str = False):
     collection_nfts[name,'plant_calc_data'] = plant_calc_data
 
     if bool(referrer) == True:
+        referrer_info = collection_nfts[referrer]
+        assert referrer_info[0] == plant_generation, "You have entered a referrer that isn't part of the current generation. Please try again."
         collection_nfts[nick,'bonus_berries']  = 3
         collection_nfts[referrer,'bonus_berries']  += 3
     else:
